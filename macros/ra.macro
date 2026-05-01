@@ -1,0 +1,19 @@
+# Side mouse button toggles this macro on Arch Linux Wayland.
+
+name R and A demo
+description Press r every 1s and a every 0.2s. Starts paused; side/extra/space toggles.
+backend auto
+toggle side extra browserback browserforward
+grab off
+start paused
+
+every 1s press r
+every 0.2s press a
+
+# A sequence supports explicit spacing between keys:
+#
+sequence 3s {
+  press r
+  wait 0.2s
+  press a
+}
