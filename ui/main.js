@@ -23,7 +23,6 @@ const powerButtonText = document.querySelector("#powerButtonText");
 const tabButtons = document.querySelectorAll("[data-tab-target]");
 const tabPages = document.querySelectorAll("[data-tab-page]");
 const visualStatus = document.querySelector("#visualStatus");
-const visualEnabled = document.querySelector("#visualEnabled");
 const visualName = document.querySelector("#visualName");
 const visualDescription = document.querySelector("#visualDescription");
 const visualBackend = document.querySelector("#visualBackend");
@@ -139,7 +138,7 @@ function renderMacroStatus(status) {
   if (!status?.active) {
     macroStateBadge.textContent = "未运行";
     macroStateBadge.className = "pill";
-    macroStateText.textContent = status?.enabled === false ? "宏已禁用，请先在图形编辑页启用。" : "点击启动会读取当前配置文件并在后台运行宏。";
+    macroStateText.textContent = status?.enabled === false ? "宏已禁用，请在高级脚本中改为 enabled on。" : "点击启动会读取当前配置文件并在后台运行宏。";
     renderPowerButton(false);
     return;
   }
@@ -247,7 +246,6 @@ function programToVisualModel(program) {
 
 function renderVisualEditor() {
   const model = normalizeVisualModel(state.visualModel);
-  visualEnabled.checked = model.enabled;
   visualName.value = model.name;
   visualDescription.value = model.description;
   visualBackend.value = model.backend;
@@ -259,7 +257,7 @@ function renderVisualEditor() {
 }
 
 function normalizeVisualModel(model) {
-  model.enabled = model.enabled ?? true;
+  model.enabled = true;
   model.name = model.name || "Macro";
   model.description = model.description || "";
   model.backend = ["auto", "ydotool", "xdotool"].includes(model.backend) ? model.backend : "auto";
@@ -374,7 +372,7 @@ function renderStepNode(step, taskIndex, stepIndex) {
 }
 
 function updateVisualBasics() {
-  state.visualModel.enabled = visualEnabled.checked;
+  state.visualModel.enabled = true;
   state.visualModel.name = visualName.value.trim() || "Macro";
   state.visualModel.description = visualDescription.value.trim();
   state.visualModel.backend = visualBackend.value;
@@ -746,7 +744,7 @@ editor.addEventListener("scroll", () => {
   lineNumbers.scrollTop = editor.scrollTop;
 });
 
-[visualEnabled, visualName, visualDescription, visualBackend, visualStart, visualGrab].forEach((element) => {
+[visualName, visualDescription, visualBackend, visualStart, visualGrab].forEach((element) => {
   element.addEventListener("input", updateVisualBasics);
   element.addEventListener("change", updateVisualBasics);
 });

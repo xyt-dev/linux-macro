@@ -562,8 +562,8 @@ input[type="checkbox"] {
 
 .suggestion-item {
   display: grid;
-  grid-template-columns: 90px minmax(0, 1fr);
-  gap: 4px 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 12px;
   padding: 10px 12px;
   border-radius: 14px;
   text-align: left;
@@ -571,14 +571,33 @@ input[type="checkbox"] {
   background: var(--soft-bg);
 }
 
+.suggestion-item strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.suggestion-item span {
+  justify-self: end;
+  max-width: 150px;
+  min-width: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  background: var(--field-bg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .suggestion-item span,
 .suggestion-item small {
   color: var(--subtext);
-  overflow-wrap: anywhere;
 }
 
 .suggestion-item small {
   grid-column: 1 / -1;
+  overflow-wrap: anywhere;
 }
 
 .chip-list {
