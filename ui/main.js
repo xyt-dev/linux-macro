@@ -27,8 +27,6 @@ const visualName = document.querySelector("#visualName");
 const visualDescription = document.querySelector("#visualDescription");
 const visualBackend = document.querySelector("#visualBackend");
 const visualStart = document.querySelector("#visualStart");
-const visualGrab = document.querySelector("#visualGrab");
-const triggerInput = document.querySelector("#triggerInput");
 const triggerSuggestions = document.querySelector("#triggerSuggestions");
 const triggerChips = document.querySelector("#triggerChips");
 const addEveryTaskButton = document.querySelector("#addEveryTask");
@@ -250,7 +248,6 @@ function renderVisualEditor() {
   visualDescription.value = model.description;
   visualBackend.value = model.backend;
   visualStart.value = model.startRunning ? "running" : "paused";
-  visualGrab.checked = model.grabToggleDevice;
   renderTriggerChips();
   renderTriggerSuggestions();
   renderFlowTasks();
@@ -261,6 +258,7 @@ function normalizeVisualModel(model) {
   model.name = model.name || "Macro";
   model.description = model.description || "";
   model.backend = ["auto", "ydotool", "xdotool"].includes(model.backend) ? model.backend : "auto";
+  model.grabToggleDevice = false;
   model.toggleButtons = Array.isArray(model.toggleButtons) && model.toggleButtons.length ? model.toggleButtons : ["KEY_SPACE"];
   model.tasks = Array.isArray(model.tasks) && model.tasks.length ? model.tasks : [{ type: "every", interval: 1, steps: [{ kind: "press", key: "space" }] }];
   model.tasks.forEach((task) => {
@@ -283,11 +281,7 @@ function renderTriggerChips() {
 }
 
 function renderTriggerSuggestions() {
-  const query = triggerInput.value.trim().toLowerCase();
-  const matches = TRIGGER_OPTIONS.filter(([alias, canonical, description]) => {
-    const haystack = `${alias} ${canonical} ${description}`.toLowerCase();
-    return !query || haystack.includes(query);
-  }).slice(0, 8);
+  const matches = TRIGGER_OPTIONS.slice(0, 10);
 
   triggerSuggestions.innerHTML = matches
     .map(([alias, canonical, description]) => {
@@ -377,7 +371,7 @@ function updateVisualBasics() {
   state.visualModel.description = visualDescription.value.trim();
   state.visualModel.backend = visualBackend.value;
   state.visualModel.startRunning = visualStart.value === "running";
-  state.visualModel.grabToggleDevice = visualGrab.checked;
+  state.visualModel.grabToggleDevice = false;
   syncScriptFromVisual();
 }
 
@@ -744,19 +738,15 @@ editor.addEventListener("scroll", () => {
   lineNumbers.scrollTop = editor.scrollTop;
 });
 
-[visualName, visualDescription, visualBackend, visualStart, visualGrab].forEach((element) => {
+[visualName, visualDescription, visualBackend, visualStart].forEach((element) => {
   element.addEventListener("input", updateVisualBasics);
   element.addEventListener("change", updateVisualBasics);
 });
-
-triggerInput.addEventListener("input", renderTriggerSuggestions);
-triggerInput.addEventListener("focus", renderTriggerSuggestions);
 
 triggerSuggestions.addEventListener("click", (event) => {
   const button = event.target.closest("[data-add-trigger]");
   if (!button) return;
   addTrigger(button.dataset.addTrigger);
-  triggerInput.value = "";
   renderTriggerSuggestions();
 });
 
