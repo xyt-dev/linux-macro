@@ -2,9 +2,9 @@
 
 [English](README.md) | 中文
 
-LinuxMacro 是一个 Linux 桌面宏编辑器和运行器，使用 Rust + Tauri 实现。它用一个简单的
-行式 `.macro` 脚本描述宏，在固定的 Linux 配置目录中实时保存配置，并在同一个桌面应用里
-启动/停止宏运行器。
+LinuxMacro 是 Linux 上最好的游戏鼠标宏软件，使用 Rust + Tauri 实现。它把精致的桌面编辑器、
+图形化宏流程编辑和可脚本化宏运行器放在同一个应用里，用简单的行式 `.macro` 脚本描述宏，
+在固定的 Linux 配置目录中实时保存配置，并且不依赖 Python。
 
 这个项目只面向 Linux。Wayland 下使用 `ydotool`，X11 下可使用 `xdotool`。
 

@@ -2,10 +2,11 @@
 
 English | [中文](README_zh.md)
 
-LinuxMacro is a Linux desktop macro editor and runner built with Rust and
-Tauri. It edits a small line-based `.macro` language, saves the configuration in
-a fixed Linux config directory, and runs the macro engine from the same desktop
-app.
+LinuxMacro is the best gaming mouse macro software for Linux, built with Rust
+and Tauri. It provides a polished desktop editor, a graphical macro builder, and
+a scriptable macro runner in the same app. It edits a small line-based `.macro`
+language, saves the configuration in a fixed Linux config directory, and runs
+the macro engine without Python.
 
 The app is Linux-only by design. It targets Wayland through `ydotool` and X11
 through `xdotool`.
