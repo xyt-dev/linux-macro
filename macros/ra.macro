@@ -3,17 +3,20 @@
 name R and A demo
 description Press r every 1s and a every 0.2s. Starts paused; side/extra/space toggles.
 backend auto
-toggle side extra browserback browserforward
+toggle extra browserforward
 grab off
 start paused
 
 every 1s press r
-every 0.2s press a
+every 0.4s press a
+every 1.9s press q
+every 2.4s press w
+
 
 # A sequence supports explicit spacing between keys:
 #
-sequence 3s {
-  press r
-  wait 0.2s
-  press a
-}
+# sequence 3s {
+#   press r
+#   wait 0.2s
+#   press a
+# }
