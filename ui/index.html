@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="mocha">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LinuxMacro</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="app-header">
+        <section class="brand-card">
+          <div class="brand-mark">⌘</div>
+          <div>
+            <p class="eyebrow">LinuxMacro</p>
+            <h1>宏控制台</h1>
+          </div>
+        </section>
+
+        <nav class="tab-nav" aria-label="页面切换">
+          <button class="tab-button active" data-tab-target="control" type="button">控制台</button>
+          <button class="tab-button" data-tab-target="visual" type="button">图形编辑</button>
+          <button class="tab-button" data-tab-target="advanced" type="button">高级脚本</button>
+        </nav>
+
+        <div class="header-actions">
+          <span id="apiState" class="pill connection-pill" title="桌面界面和 Rust 后端通信状态">正在连接后端</span>
+        </div>
+      </header>
+
+      <section id="controlPage" class="tab-page control-page active" data-tab-page="control">
+        <section class="panel control-hero">
+          <div class="panel-heading">
+            <span>宏运行器</span>
+            <span id="macroStateBadge" class="pill">未运行</span>
+          </div>
+
+          <div class="power-stage">
+            <button id="powerToggle" class="power-button" type="button" aria-label="启动宏">
+              <span class="power-symbol">⏻</span>
+              <span id="powerButtonText" class="power-button-text">启动</span>
+            </button>
+            <p id="macroStateText" class="runtime-copy">点击圆形按钮读取当前配置并运行宏。</p>
+          </div>
+
+        </section>
+
+        <aside class="control-side">
+          <section class="panel">
+            <div class="panel-heading">
+              <span>配置文件</span>
+            </div>
+            <p class="muted">固定读取和写入 Linux 配置目录，无需命令行手动传入。</p>
+            <code id="configPath" class="path">~/.config/linuxmacro/config.macro</code>
+          </section>
+
+          <section class="panel backend-panel">
+            <div class="panel-heading">
+              <span>输入后端</span>
+              <span id="backendBadge" class="pill">检测中</span>
+            </div>
+            <p id="backendMessage" class="muted">Rust 会直接启动 ydotool/xdotool 进程，不通过 Python。</p>
+            <button id="installYdotool" class="ghost-button wide" type="button">安装/启动 ydotool</button>
+          </section>
+
+          <section class="panel">
+            <div class="panel-heading">
+              <span>主题</span>
+              <button id="themeToggle" class="ghost-button" type="button">Light</button>
+            </div>
+            <p class="muted">在 Catppuccin Mocha 和 Light 配色之间切换。</p>
+          </section>
+        </aside>
+      </section>
+
+      <section id="visualPage" class="tab-page visual-page" data-tab-page="visual">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Visual Macro Builder</p>
+            <h2>图形编辑</h2>
+          </div>
+          <div id="visualStatus" class="status-pill neutral">
+            <span class="dot"></span>
+            <span>等待加载</span>
+          </div>
+        </header>
+
+        <div class="visual-layout">
+          <aside class="visual-side">
+            <section class="panel visual-settings">
+              <div class="panel-heading">
+                <span>基础设置</span>
+                <label class="switch-row compact">
+                  <input id="visualEnabled" type="checkbox" />
+                  <span>启用</span>
+                </label>
+              </div>
+
+              <label class="field">
+                <span>名称</span>
+                <input id="visualName" type="text" placeholder="宏名称" />
+              </label>
+
+              <label class="field">
+                <span>描述</span>
+                <textarea id="visualDescription" rows="3" placeholder="宏说明"></textarea>
+              </label>
+
+              <div class="field-grid">
+                <label class="field">
+                  <span>后端</span>
+                  <select id="visualBackend">
+                    <option value="auto">auto</option>
+                    <option value="ydotool">ydotool</option>
+                    <option value="xdotool">xdotool</option>
+                  </select>
+                </label>
+
+                <label class="field">
+                  <span>启动状态</span>
+                  <select id="visualStart">
+                    <option value="paused">paused</option>
+                    <option value="running">running</option>
+                  </select>
+                </label>
+              </div>
+
+              <label class="switch-row">
+                <input id="visualGrab" type="checkbox" />
+                <span>抓取触发设备</span>
+              </label>
+            </section>
+
+            <section class="panel trigger-panel">
+              <div class="panel-heading">
+                <span>启用键</span>
+              </div>
+              <p class="muted">输入关键字会实时显示匹配项，点击即可加入触发键列表。</p>
+              <label class="field">
+                <span>搜索触发键</span>
+                <input id="triggerInput" type="text" placeholder="side / space / browser..." autocomplete="off" />
+              </label>
+              <div id="triggerSuggestions" class="suggestion-list"></div>
+              <div id="triggerChips" class="chip-list"></div>
+            </section>
+          </aside>
+
+          <section class="panel flow-panel">
+            <div class="panel-heading">
+              <span>流程</span>
+              <div class="flow-actions">
+                <button id="addEveryTask" class="ghost-button" type="button">添加循环按键</button>
+                <button id="addSequenceTask" class="ghost-button" type="button">添加序列</button>
+              </div>
+            </div>
+            <div id="flowTasks" class="flow-tasks"></div>
+          </section>
+        </div>
+      </section>
+
+      <section id="advancedPage" class="tab-page editor-page" data-tab-page="advanced">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Live Macro Script</p>
+            <h2>高级脚本</h2>
+          </div>
+          <div class="status-stack">
+            <div id="saveStatus" class="status-pill neutral">
+              <span class="dot"></span>
+              <span>等待加载</span>
+            </div>
+            <button id="saveNow" class="primary-button" type="button">立即保存</button>
+          </div>
+        </header>
+
+        <div class="editor-layout">
+          <section class="editor-card">
+            <div class="editor-toolbar">
+              <div class="traffic-lights" aria-hidden="true">
+                <span></span><span></span><span></span>
+              </div>
+              <div class="editor-meta">
+                <span id="lineCount">0 行</span>
+                <span id="charCount">0 字符</span>
+              </div>
+            </div>
+            <div class="editor-wrap">
+              <div id="lineNumbers" class="line-numbers" aria-hidden="true">1</div>
+              <textarea
+                id="editor"
+                spellcheck="false"
+                autocomplete="off"
+                autocapitalize="off"
+                placeholder="正在加载 ~/.config/linuxmacro/config.macro..."
+              ></textarea>
+            </div>
+          </section>
+
+          <aside class="editor-side">
+            <section class="panel">
+              <div class="panel-heading">
+                <span>快速插入</span>
+              </div>
+              <div class="snippet-grid">
+                <button data-snippet="every 1s press space\n" type="button">循环按键</button>
+                <button data-snippet="sequence 3s {\n  press r\n  wait 200ms\n  press a\n}\n" type="button">序列</button>
+                <button data-snippet="toggle side extra space\n" type="button">触发键</button>
+                <button data-snippet="start paused\n" type="button">启动状态</button>
+              </div>
+            </section>
+
+            <section class="panel validation-card">
+              <div class="panel-heading">
+                <span>校验结果</span>
+                <span id="validationBadge" class="pill">未校验</span>
+              </div>
+              <p id="validationMessage" class="validation-message">保存后会在这里显示解析结果。</p>
+            </section>
+
+            <section class="panel">
+              <div class="panel-heading">
+                <span>宏信息</span>
+              </div>
+              <div id="macroSummary" class="summary-list"></div>
+            </section>
+
+            <section class="panel tasks-panel">
+              <div class="panel-heading">
+                <span>任务预览</span>
+              </div>
+              <div id="taskList" class="task-list"></div>
+            </section>
+
+            <section class="panel syntax">
+              <div class="panel-heading">
+                <span>语法速查</span>
+              </div>
+              <ul>
+                <li><code>name &lt;text&gt;</code></li>
+                <li><code>backend auto|ydotool|xdotool</code></li>
+                <li><code>toggle side extra space</code></li>
+                <li><code>every 1s press r</code></li>
+                <li><code>sequence 3s { ... }</code></li>
+              </ul>
+            </section>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <script src="./main.js"></script>
+  </body>
+</html>

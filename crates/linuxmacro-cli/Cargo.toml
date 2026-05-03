@@ -1,0 +1,8 @@
+[package]
+name = "linuxmacro"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+
+[dependencies]
+linuxmacro-core = { path = "../linuxmacro-core" }

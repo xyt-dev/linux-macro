@@ -2,3 +2,10 @@
 __pycache__/
 *.egg-info/
 macros
+target/
+node_modules/
+dist/
+src-tauri/gen/
+*.py
+pyproject.toml
+uv.lock

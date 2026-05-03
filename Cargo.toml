@@ -1,0 +1,12 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/linuxmacro-core",
+  "crates/linuxmacro-cli",
+  "src-tauri",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+authors = ["LinuxMacro contributors"]
