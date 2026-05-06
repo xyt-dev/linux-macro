@@ -80,13 +80,31 @@ sudo zypper install -y patterns-devel-base-devel_basis curl wget file \
 如果你的发行版包名不同，安装等价的 Tauri v2 Linux 依赖即可：GTK 3、WebKitGTK 4.1、
 OpenSSL、AppIndicator、librsvg 和基础编译工具。
 
-### 3. 启动桌面应用
+### 3. 安装桌面命令
+
+在仓库根目录执行：
+
+```bash
+cargo install --path src-tauri --locked
+linux-macro
+```
+
+这会把 Tauri 桌面应用安装为 `~/.cargo/bin/linux-macro`。
+请确保 `~/.cargo/bin` 已加入 `PATH`。
+
+如果从 Git 仓库安装，使用同样的 package 和 bin 名称：
+
+```bash
+cargo install --git <repo-url> --package linuxmacro-app --bin linux-macro --locked
+```
+
+### 4. 不安装直接启动
 
 ```bash
 cargo run -p linuxmacro-app
 ```
 
-### 4. 可选 CLI
+### 5. 可选 CLI
 
 ```bash
 cargo run -p linuxmacro -- init

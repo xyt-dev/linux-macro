@@ -92,13 +92,31 @@ If a package name differs on your distribution, install the equivalent Tauri v2
 Linux dependencies: GTK 3, WebKitGTK 4.1, OpenSSL, AppIndicator, librsvg, and
 basic build tools.
 
-### 3. Run the desktop app
+### 3. Install the desktop command
+
+From the repository root:
+
+```bash
+cargo install --path src-tauri --locked
+linux-macro
+```
+
+This installs the Tauri desktop app as `linux-macro` under `~/.cargo/bin`.
+Make sure `~/.cargo/bin` is in `PATH`.
+
+For a Git install, use the same package and binary names:
+
+```bash
+cargo install --git <repo-url> --package linuxmacro-app --bin linux-macro --locked
+```
+
+### 4. Run without installing
 
 ```bash
 cargo run -p linuxmacro-app
 ```
 
-### 4. Optional CLI
+### 5. Optional CLI
 
 ```bash
 cargo run -p linuxmacro -- init

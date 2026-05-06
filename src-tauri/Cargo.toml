@@ -5,6 +5,10 @@ edition.workspace = true
 authors.workspace = true
 build = "build.rs"
 
+[[bin]]
+name = "linux-macro"
+path = "src/main.rs"
+
 [dependencies]
 linuxmacro-core = { path = "../crates/linuxmacro-core" }
 serde = { version = "1", features = ["derive"] }
