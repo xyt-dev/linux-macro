@@ -260,6 +260,7 @@ h2 {
 }
 
 .control-side > .panel,
+.macro-column > .panel,
 .visual-side > .panel,
 .editor-side > .panel {
   flex: 0 0 auto;
@@ -472,11 +473,12 @@ h2 {
 
 .visual-layout {
   display: grid;
-  grid-template-columns: 360px minmax(0, 1fr);
+  grid-template-columns: 300px 360px minmax(0, 1fr);
   gap: 18px;
   min-height: 0;
 }
 
+.macro-column,
 .visual-side {
   display: flex;
   flex-direction: column;
@@ -552,6 +554,79 @@ input[type="checkbox"] {
   gap: 12px;
 }
 
+.macro-list {
+  display: grid;
+  gap: 10px;
+}
+
+.macro-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 34px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 18px;
+  background: var(--soft-bg);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease;
+}
+
+.macro-card.active {
+  border-color: var(--mauve);
+  background: color-mix(in srgb, var(--mauve) 12%, var(--soft-bg));
+}
+
+.macro-card.drag-over {
+  border-color: var(--green);
+  background: color-mix(in srgb, var(--green) 18%, var(--soft-bg));
+  outline: 3px solid color-mix(in srgb, var(--green) 24%, transparent);
+  outline-offset: 2px;
+}
+
+.macro-card.disabled {
+  opacity: 0.72;
+}
+
+.macro-enable {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--subtext);
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.macro-select {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+  padding: 4px 0;
+  color: var(--text);
+  text-align: left;
+  background: transparent;
+}
+
+.macro-select strong,
+.macro-select small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.macro-select small {
+  color: var(--subtext);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.macro-delete {
+  justify-self: end;
+}
+
 .suggestion-list {
   display: grid;
   gap: 8px;
@@ -569,6 +644,14 @@ input[type="checkbox"] {
   text-align: left;
   color: var(--text);
   background: var(--soft-bg);
+}
+
+.suggestion-item[draggable="true"] {
+  cursor: grab;
+}
+
+.suggestion-item[draggable="true"]:active {
+  cursor: grabbing;
 }
 
 .suggestion-item strong {
@@ -813,19 +896,77 @@ input[type="checkbox"] {
 
 .step-node {
   display: grid;
-  grid-template-columns: 110px minmax(120px, 1fr) 34px;
+  grid-template-columns: 100px minmax(120px, 1fr) 100px 34px;
   gap: 10px;
   align-items: center;
+}
+
+.step-node.wait-step {
+  grid-template-columns: 110px minmax(120px, 1fr) 34px;
 }
 
 .step-node button {
   justify-self: end;
 }
 
+.step-spacer {
+  min-height: 1px;
+}
+
 .step-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.target-suggestion-menu {
+  position: fixed;
+  z-index: 1000;
+  display: grid;
+  gap: 4px;
+  overflow: auto;
+  padding: 6px;
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--mantle) 94%, transparent);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.target-suggestion-menu[hidden] {
+  display: none;
+}
+
+.target-suggestion-item {
+  display: grid;
+  grid-template-columns: minmax(74px, auto) minmax(0, 1fr);
+  gap: 2px 10px;
+  padding: 9px 10px;
+  border-radius: 12px;
+  color: var(--text);
+  text-align: left;
+  background: transparent;
+}
+
+.target-suggestion-item.active,
+.target-suggestion-item:hover {
+  background: color-mix(in srgb, var(--mauve) 18%, var(--soft-bg));
+}
+
+.target-suggestion-item strong {
+  font-family: var(--font-mono);
+}
+
+.target-suggestion-item span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.target-suggestion-item small {
+  grid-column: 1 / -1;
+  color: var(--subtext);
 }
 
 .editor-page {
@@ -1022,7 +1163,7 @@ input[type="checkbox"] {
 
 .task-item {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-columns: 38px minmax(0, 1fr);
   gap: 10px;
   align-items: start;
   padding: 10px;
@@ -1032,7 +1173,7 @@ input[type="checkbox"] {
 
 .task-item span {
   display: grid;
-  width: 28px;
+  width: 38px;
   height: 28px;
   place-items: center;
   border-radius: 10px;
@@ -1059,6 +1200,7 @@ input[type="checkbox"] {
 
   .app-header,
   .control-page,
+  .macro-column,
   .visual-layout,
   .editor-layout {
     display: flex;

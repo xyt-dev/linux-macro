@@ -34,16 +34,33 @@ fn run_default_config() -> CliResult<()> {
     let path = config::ensure_config_file()?;
     let program = parser::parse_macro_file(&path)?;
     println!("LinuxMacro config: {}", path.display());
-    println!("Macro: {}", program.name);
+    println!("Backend: {}", program.backend);
     println!(
-        "Status: {}",
-        if program.start_running {
-            "running"
-        } else {
-            "paused"
-        }
+        "Enabled macros: {} / {}",
+        program
+            .macros
+            .iter()
+            .filter(|macro_spec| macro_spec.enabled)
+            .count(),
+        program.macros.len()
     );
-    println!("Toggle: {}", program.toggle_buttons.join(", "));
+    for macro_spec in &program.macros {
+        println!(
+            "  - {} [{}] start={} trigger={}",
+            macro_spec.name,
+            if macro_spec.enabled {
+                "enabled"
+            } else {
+                "disabled"
+            },
+            if macro_spec.start_running {
+                "running"
+            } else {
+                "paused"
+            },
+            macro_spec.trigger_buttons.join(", ")
+        );
+    }
     println!("Press Ctrl+C to stop the process.");
     runtime::run_program(program)?;
     Ok(())
@@ -53,12 +70,23 @@ fn check_default_config() -> CliResult<()> {
     let path = config::ensure_config_file()?;
     let program = parser::parse_macro_file(&path)?;
     println!("OK: {}", path.display());
-    println!("Macro: {}", program.name);
-    println!("Enabled: {}", program.enabled);
     println!("Backend: {}", program.backend);
-    println!("Tasks: {}", program.tasks.len());
-    for task in &program.tasks {
-        println!("  - {}", task.description);
+    println!("Macros: {}", program.macros.len());
+    for macro_spec in &program.macros {
+        println!(
+            "  - {} [{}] trigger={}",
+            macro_spec.name,
+            if macro_spec.enabled {
+                "enabled"
+            } else {
+                "disabled"
+            },
+            macro_spec.trigger_buttons.join(", ")
+        );
+        println!("    Tasks: {}", macro_spec.tasks.len());
+        for task in &macro_spec.tasks {
+            println!("      - {}", task.description);
+        }
     }
     Ok(())
 }

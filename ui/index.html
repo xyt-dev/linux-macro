@@ -86,10 +86,20 @@
         </header>
 
         <div class="visual-layout">
+          <aside class="macro-column">
+            <section class="panel macro-list-panel">
+              <div class="panel-heading">
+                <span>宏列表</span>
+                <button id="addMacro" class="ghost-button" type="button">新增宏</button>
+              </div>
+              <div id="macroList" class="macro-list"></div>
+            </section>
+          </aside>
+
           <aside class="visual-side">
             <section class="panel visual-settings">
               <div class="panel-heading">
-                <span>基础设置</span>
+                <span id="selectedMacroTitle">宏设置</span>
               </div>
 
               <label class="field">
@@ -104,7 +114,7 @@
 
               <div class="field-grid">
                 <label class="field">
-                  <span>后端</span>
+                  <span>全局后端</span>
                   <select id="visualBackend">
                     <option value="auto">auto</option>
                     <option value="ydotool">ydotool</option>
@@ -127,7 +137,7 @@
               <div class="panel-heading">
                 <span>启用键</span>
               </div>
-              <p class="muted">点击常用触发键即可加入列表。</p>
+              <p class="muted">拖到左侧宏卡片分配，或点击加入当前宏。只提供侧键、浏览器键和 F1-F12。</p>
               <div id="triggerSuggestions" class="suggestion-list"></div>
               <div id="triggerChips" class="chip-list"></div>
             </section>
@@ -137,7 +147,7 @@
             <div class="panel-heading">
               <span>流程</span>
               <div class="flow-actions">
-                <button id="addEveryTask" class="ghost-button" type="button">添加循环按键</button>
+                <button id="addEveryTask" class="ghost-button" type="button">添加循环动作</button>
                 <button id="addSequenceTask" class="ghost-button" type="button">添加序列</button>
               </div>
             </div>
@@ -190,9 +200,11 @@
                 <span>快速插入</span>
               </div>
               <div class="snippet-grid">
-                <button data-snippet="every 1s press space\n" type="button">循环按键</button>
+                <button data-snippet="every 1s press space\n" type="button">循环动作</button>
+                <button data-snippet="every 50ms click left\n" type="button">鼠标动作</button>
+                <button data-snippet="every 1s hold 200ms press r\n" type="button">长按动作</button>
                 <button data-snippet="sequence 3s {\n  press r\n  wait 200ms\n  press a\n}\n" type="button">序列</button>
-                <button data-snippet="toggle side extra space\n" type="button">触发键</button>
+                <button data-snippet="macro &quot;New macro&quot; {\n  enabled on\n  trigger side\n  start paused\n  every 50ms click left\n}\n" type="button">宏块</button>
                 <button data-snippet="start paused\n" type="button">启动状态</button>
               </div>
             </section>
@@ -226,8 +238,12 @@
               <ul>
                 <li><code>name &lt;text&gt;</code></li>
                 <li><code>backend auto|ydotool|xdotool</code></li>
-                <li><code>toggle side extra space</code></li>
+                <li><code>macro "name" { ... }</code></li>
+                <li><code>trigger side extra f1</code></li>
                 <li><code>every 1s press r</code></li>
+                <li><code>every 50ms click left</code></li>
+                <li><code>every 1s hold 200ms press r</code></li>
+                <li><code>hold 200ms click left</code></li>
                 <li><code>sequence 3s { ... }</code></li>
               </ul>
             </section>

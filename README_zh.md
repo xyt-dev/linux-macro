@@ -22,7 +22,7 @@ LinuxMacro 不通过命令行参数传入配置文件。当前配置文件固定
 ## 功能
 
 - 桌面应用和宏运行器是同一个 Tauri 应用。
-- 图形宏编辑器：启用/禁用宏、选择触发键、编辑循环和序列流程。
+- 图形宏编辑器：管理多个独立宏，每个宏都有自己的启用复选框、拖放分配触发键、循环/序列流程。
 - 高级脚本编辑器：直接编辑 `.macro`。
 - 保存前实时语法校验，语法错误不会覆盖当前配置。
 - 防抖实时写入 `~/.config/linuxmacro/config.macro`。
@@ -37,9 +37,10 @@ LinuxMacro 不通过命令行参数传入配置文件。当前配置文件固定
 2. 桌面壳是 Tauri，JavaScript 通过 Tauri IPC 调 Rust 命令。
 3. Rust 固定读取和写入 `~/.config/linuxmacro/config.macro`。
 4. 每次保存前都会先解析脚本；解析失败时拒绝写入，避免坏配置覆盖可用配置。
-5. 运行器解析同一个配置文件，并启动后台调度线程。
-6. 全局触发键从 Linux `/dev/input/event*` 读取。
-7. Wayland 下通过 `ydotool key ...` 注入按键；X11 下可通过 `xdotool key ...` 注入按键。
+5. 运行器解析同一个配置文件，并为每个已启用宏启动一个后台调度线程。
+6. 全局触发键从 Linux `/dev/input/event*` 读取；按下某个触发键只切换拥有该触发键的宏。
+7. Wayland 下通过 `ydotool` 注入按键和鼠标；X11 下可通过 `xdotool key ...` 和
+   `xdotool click ...` 注入。
 8. `ydotool` 和 `xdotool` 都是 Rust 直接启动的子进程，不经过 Python。
 9. 应用内安装 `ydotool` 时，包管理器命令放在阻塞工作线程中执行；等待授权、下载或包管理器锁时不会卡死 UI。
 
@@ -177,37 +178,54 @@ LinuxMacro 需要两类 Linux 权限：
 `.macro` 是行式格式：
 
 ```text
-name R and A demo
-description Press r every 1s and a every 0.4s.
-enabled on
 backend auto
-toggle side extra space browserback browserforward
-grab off
-start paused
 
-every 1s press r
-every 0.4s press a
+macro "左键连点" {
+  description 按下鼠标侧键切换 50ms 左键连点。
+  enabled on
+  trigger side
+  start paused
+  every 50ms click left
+}
 
-sequence 3s {
-  press r
-  wait 200ms
-  press a
+macro "R 后 A" {
+  description 按下鼠标额外键切换一个序列宏。
+  enabled on
+  trigger extra
+  start paused
+
+  sequence 3s {
+    press r
+    wait 200ms
+    click left
+    press a
+  }
 }
 ```
 
 支持的语句：
 
-- `name <text>`
-- `description <text>`
-- `enabled on|off`
-- `backend auto|ydotool|xdotool`
-- `toggle side|extra|space|browserback|browserforward|BTN_SIDE|BTN_EXTRA|KEY_SPACE`
-- `grab on|off`
-- `start paused|running`
-- `every <duration> press <key>`
-- `sequence <duration> { ... }`，块内支持 `press <key>` 和 `wait <duration>`
+- 顶层：`backend auto|ydotool|xdotool`
+- 宏块：`macro "name" { ... }`
+- 单个宏内：`description <text>`
+- 单个宏内：`enabled on|off`
+- 单个宏内：`trigger side|extra|browserback|browserforward|f1..f12|BTN_SIDE|BTN_EXTRA|KEY_F1`
+- 单个宏内：`start paused|running`
+- 单个宏内：`every <duration> press <key>`
+- 单个宏内：`every <duration> click left|right|middle|side|extra`
+- 单个宏内：`every <duration> hold <duration> press <key>`
+- 单个宏内：`every <duration> hold <duration> click left|right|middle|side|extra`
+- 单个宏内：`sequence <duration> { ... }`，块内支持 `press <key>`、`click <button>`、`hold <duration> press|click <target>` 和 `wait <duration>`
 
 时间可以写成 `1`、`1s` 或 `200ms`。
+
+图形编辑器里不需要选择键盘/鼠标。目标写 `left`、`right`、`middle`、`side`、`extra`
+会按鼠标按钮处理，其它目标按键盘按键处理。如果确实需要处理歧义，可以写 `key:left`
+或 `mouse:left` 强制指定。
+
+每个已启用宏必须使用不同触发键。解析器会拒绝两个已启用宏共用同一个触发键，避免一个物理按键误切换多个宏。已禁用宏可以暂时保留旧触发键，启用前再调整。图形编辑器只提供更安全的启用键：鼠标侧键、额外键、浏览器前进/后退和 F1-F12；不会提供字母、数字、空格或鼠标主按键作为启用键。
+
+旧版单宏配置仍然兼容：顶层 `name`、`toggle`、`every`、`sequence` 等写法可以继续解析；在图形编辑器保存后会转换成单个 `macro "name" { ... }` 块。
 
 ## 开发检查
 

@@ -12,10 +12,10 @@
       {
         "label": "main",
         "title": "LinuxMacro Editor",
-        "width": 1360,
-        "height": 900,
-        "minWidth": 1180,
-        "minHeight": 780,
+        "width": 1600,
+        "height": 980,
+        "minWidth": 1360,
+        "minHeight": 840,
         "resizable": true
       }
     ],

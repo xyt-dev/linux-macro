@@ -1,6 +1,9 @@
 use crate::{
-    MacroProgram, MacroStep, MacroTaskSpec,
-    backend::{KeyBackend, MacroRuntimeError, RuntimeResult, choose_backend, create_backend},
+    MacroProgram, MacroSpec, MacroStep, MacroTaskSpec,
+    backend::{
+        KeyBackend, MacroRuntimeError, MouseButtonBackend, RuntimeResult, choose_backend,
+        create_backend, create_mouse_button_backend,
+    },
     input,
 };
 use serde::{Deserialize, Serialize};
@@ -34,6 +37,11 @@ pub struct RuntimeSnapshot {
 
 pub struct ProgramHandle {
     program: MacroProgram,
+    workers: Vec<MacroWorker>,
+}
+
+struct MacroWorker {
+    name: String,
     state: RuntimeState,
     worker: Option<JoinHandle<()>>,
 }
@@ -41,6 +49,7 @@ pub struct ProgramHandle {
 struct ScheduledTask {
     spec: MacroTaskSpec,
     backends: HashMap<String, KeyBackend>,
+    mouse_backends: HashMap<String, MouseButtonBackend>,
     next_time: Instant,
 }
 
@@ -109,7 +118,7 @@ impl RuntimeState {
 
 pub fn run_program(program: MacroProgram) -> RuntimeResult<()> {
     let mut handle = spawn_program(program)?;
-    while !handle.state().is_stopped() {
+    while !handle.is_stopped() {
         thread::sleep(Duration::from_millis(100));
     }
     handle.join();
@@ -117,33 +126,61 @@ pub fn run_program(program: MacroProgram) -> RuntimeResult<()> {
 }
 
 pub fn spawn_program(mut program: MacroProgram) -> RuntimeResult<ProgramHandle> {
-    if !program.enabled {
+    let enabled_macros = program
+        .macros
+        .iter()
+        .filter(|macro_spec| macro_spec.enabled)
+        .collect::<Vec<_>>();
+    if enabled_macros.is_empty() {
         return Err(MacroRuntimeError::new(
-            "macro is disabled; enable it in the graphical editor before starting",
+            "no enabled macros; enable at least one macro in the graphical editor before starting",
         ));
     }
 
     let backend_name = choose_backend(&program.backend)?;
     program.backend = backend_name.clone();
-    let tasks = build_tasks(&backend_name, &program.tasks)?;
-    let state = RuntimeState::new(program.start_running);
+    let mut prepared = Vec::with_capacity(enabled_macros.len());
+    for macro_spec in enabled_macros {
+        let tasks = build_tasks(&backend_name, &macro_spec.tasks)?;
+        prepared.push((macro_spec.clone(), tasks));
+    }
 
-    input::start_toggle_listener(&program, &state);
-    let worker_state = state.clone();
-    let worker = thread::Builder::new()
-        .name("linuxmacro-scheduler".to_string())
-        .spawn(move || {
+    let mut workers: Vec<MacroWorker> = Vec::with_capacity(prepared.len());
+    let mut bindings = Vec::with_capacity(prepared.len());
+    for (index, (macro_spec, tasks)) in prepared.into_iter().enumerate() {
+        let state = RuntimeState::new(macro_spec.start_running);
+        bindings.push(input::ToggleBinding {
+            macro_name: macro_spec.name.clone(),
+            trigger_names: macro_spec.trigger_buttons.clone(),
+            state: state.clone(),
+        });
+
+        let worker_state = state.clone();
+        let worker_name = thread_name(&macro_spec, index);
+        let worker = match thread::Builder::new().name(worker_name).spawn(move || {
             if let Err(error) = run_program_schedule(tasks, &worker_state) {
                 worker_state.stop(format!("runtime error: {error}"));
             }
-        })
-        .map_err(MacroRuntimeError::from)?;
+        }) {
+            Ok(worker) => worker,
+            Err(error) => {
+                for worker in &workers {
+                    worker.state.stop("failed to start all macro workers");
+                }
+                return Err(MacroRuntimeError::from(error));
+            }
+        };
 
-    Ok(ProgramHandle {
-        program,
-        state,
-        worker: Some(worker),
-    })
+        workers.push(MacroWorker {
+            name: macro_spec.name,
+            state,
+            worker: Some(worker),
+        });
+    }
+
+    input::start_toggle_listener(bindings);
+
+    Ok(ProgramHandle { program, workers })
 }
 
 impl ProgramHandle {
@@ -151,37 +188,76 @@ impl ProgramHandle {
         &self.program
     }
 
-    pub fn state(&self) -> &RuntimeState {
-        &self.state
+    pub fn is_stopped(&self) -> bool {
+        self.workers.iter().all(|worker| worker.state.is_stopped())
     }
 
     pub fn snapshot(&self) -> RuntimeSnapshot {
-        self.state.snapshot()
+        let snapshots = self
+            .workers
+            .iter()
+            .map(|worker| (worker.name.as_str(), worker.state.snapshot()))
+            .collect::<Vec<_>>();
+
+        RuntimeSnapshot {
+            running: snapshots.iter().any(|(_, snapshot)| snapshot.running),
+            stopped: snapshots.is_empty() || snapshots.iter().all(|(_, snapshot)| snapshot.stopped),
+            last_event: snapshots
+                .iter()
+                .map(|(name, snapshot)| format!("{name}: {}", snapshot.last_event))
+                .collect::<Vec<_>>()
+                .join("; "),
+        }
     }
 
     pub fn set_running(&self, running: bool, reason: &str) {
-        self.state.set_running(running, reason);
+        for worker in &self.workers {
+            worker.state.set_running(running, reason);
+        }
     }
 
     pub fn toggle(&self, reason: &str) -> bool {
-        self.state.toggle(reason)
+        let running = !self.workers.iter().any(|worker| worker.state.is_running());
+        self.set_running(running, reason);
+        running
     }
 
     pub fn stop(&self, reason: impl Into<String>) {
-        self.state.stop(reason);
+        let reason = reason.into();
+        for worker in &self.workers {
+            worker.state.stop(reason.clone());
+        }
     }
 
     pub fn join(&mut self) {
-        if let Some(worker) = self.worker.take() {
-            let _ = worker.join();
+        for worker in &mut self.workers {
+            if let Some(handle) = worker.worker.take() {
+                let _ = handle.join();
+            }
         }
     }
 }
 
 impl Drop for ProgramHandle {
     fn drop(&mut self) {
-        self.state.stop("desktop app stopped macro");
+        self.stop("desktop app stopped macro");
         self.join();
+    }
+}
+
+fn thread_name(macro_spec: &MacroSpec, index: usize) -> String {
+    let suffix = macro_spec
+        .name
+        .chars()
+        .filter(|character| {
+            character.is_ascii_alphanumeric() || *character == '-' || *character == '_'
+        })
+        .take(24)
+        .collect::<String>();
+    if suffix.is_empty() {
+        format!("linuxmacro-scheduler-{index}")
+    } else {
+        format!("linuxmacro-scheduler-{index}-{suffix}")
     }
 }
 
@@ -198,7 +274,21 @@ fn build_tasks(
             .iter()
             .filter_map(|step| match step {
                 MacroStep::Press { key } => Some(key.clone()),
-                MacroStep::Wait { .. } => None,
+                MacroStep::HoldKey { key, .. } => Some(key.clone()),
+                MacroStep::Click { .. } | MacroStep::HoldClick { .. } | MacroStep::Wait { .. } => {
+                    None
+                }
+            })
+            .collect::<HashSet<_>>();
+        let mouse_buttons = spec
+            .steps
+            .iter()
+            .filter_map(|step| match step {
+                MacroStep::Click { button } => Some(button.clone()),
+                MacroStep::HoldClick { button, .. } => Some(button.clone()),
+                MacroStep::Wait { .. } | MacroStep::Press { .. } | MacroStep::HoldKey { .. } => {
+                    None
+                }
             })
             .collect::<HashSet<_>>();
 
@@ -206,10 +296,18 @@ fn build_tasks(
         for key in keys {
             backends.insert(key.clone(), create_backend(backend_name, &key)?);
         }
+        let mut mouse_backends = HashMap::with_capacity(mouse_buttons.len());
+        for button in mouse_buttons {
+            mouse_backends.insert(
+                button.clone(),
+                create_mouse_button_backend(backend_name, &button)?,
+            );
+        }
 
         tasks.push(ScheduledTask {
             spec: spec.clone(),
             backends,
+            mouse_backends,
             next_time: now,
         });
     }
@@ -278,6 +376,24 @@ fn run_task(task: &ScheduledTask, state: &RuntimeState) -> RuntimeResult<()> {
                 })?;
                 backend.press_once()?;
             }
+            MacroStep::Click { button } => {
+                let backend = task.mouse_backends.get(button).ok_or_else(|| {
+                    MacroRuntimeError::new(format!("missing backend for mouse button {button:?}"))
+                })?;
+                backend.click_once()?;
+            }
+            MacroStep::HoldKey { key, seconds } => {
+                let backend = task.backends.get(key).ok_or_else(|| {
+                    MacroRuntimeError::new(format!("missing backend for key {key:?}"))
+                })?;
+                hold_key(backend, seconds_to_duration(*seconds), state)?;
+            }
+            MacroStep::HoldClick { button, seconds } => {
+                let backend = task.mouse_backends.get(button).ok_or_else(|| {
+                    MacroRuntimeError::new(format!("missing backend for mouse button {button:?}"))
+                })?;
+                hold_mouse_button(backend, seconds_to_duration(*seconds), state)?;
+            }
             MacroStep::Wait { seconds } => {
                 if !interruptible_sleep(seconds_to_duration(*seconds), state) {
                     return Ok(());
@@ -286,6 +402,32 @@ fn run_task(task: &ScheduledTask, state: &RuntimeState) -> RuntimeResult<()> {
         }
     }
 
+    Ok(())
+}
+
+fn hold_key(backend: &KeyBackend, duration: Duration, state: &RuntimeState) -> RuntimeResult<()> {
+    backend.key_down()?;
+    let completed = interruptible_sleep(duration, state);
+    let release_result = backend.key_up();
+    release_result?;
+    if !completed {
+        return Ok(());
+    }
+    Ok(())
+}
+
+fn hold_mouse_button(
+    backend: &MouseButtonBackend,
+    duration: Duration,
+    state: &RuntimeState,
+) -> RuntimeResult<()> {
+    backend.button_down()?;
+    let completed = interruptible_sleep(duration, state);
+    let release_result = backend.button_up();
+    release_result?;
+    if !completed {
+        return Ok(());
+    }
     Ok(())
 }
 

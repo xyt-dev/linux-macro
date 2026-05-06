@@ -30,6 +30,8 @@ struct MacroStatus {
     name: Option<String>,
     enabled: bool,
     backend: Option<String>,
+    macro_count: usize,
+    enabled_macro_count: usize,
     task_count: usize,
 }
 
@@ -60,12 +62,12 @@ fn config_path() -> Result<String, String> {
 
 #[tauri::command]
 fn start_macro(state: tauri::State<'_, AppState>) -> Result<MacroStatus, String> {
-    replace_macro(&state)
+    replace_macro(&state, false)
 }
 
 #[tauri::command]
 fn reload_macro(state: tauri::State<'_, AppState>) -> Result<MacroStatus, String> {
-    replace_macro(&state)
+    replace_macro(&state, true)
 }
 
 #[tauri::command]
@@ -149,9 +151,31 @@ fn payload(path: String, content: String) -> ConfigPayload {
     }
 }
 
-fn replace_macro(state: &tauri::State<'_, AppState>) -> Result<MacroStatus, String> {
+fn replace_macro(
+    state: &tauri::State<'_, AppState>,
+    stop_when_no_enabled_macros: bool,
+) -> Result<MacroStatus, String> {
     let path = config::ensure_config_file().map_err(|error| error.to_string())?;
     let program = parser::parse_macro_file(&path).map_err(|error| error.to_string())?;
+    if !program.macros.iter().any(|macro_spec| macro_spec.enabled) {
+        if stop_when_no_enabled_macros {
+            let mut runner = state
+                .runner
+                .lock()
+                .map_err(|_| "macro state lock poisoned".to_string())?;
+            if let Some(mut old_runner) = runner.take() {
+                old_runner.stop("all macros disabled from desktop app");
+                old_runner.join();
+            }
+            return Ok(status_from_runner(None));
+        }
+
+        return Err(
+            "no enabled macros; enable at least one macro in the graphical editor before starting"
+                .to_string(),
+        );
+    }
+
     let new_runner = runtime::spawn_program(program).map_err(|error| error.to_string())?;
 
     let mut runner = state
@@ -170,15 +194,29 @@ fn replace_macro(state: &tauri::State<'_, AppState>) -> Result<MacroStatus, Stri
 fn status_from_runner(runner: Option<&ProgramHandle>) -> MacroStatus {
     if let Some(runner) = runner {
         let snapshot = runner.snapshot();
+        let enabled_macros = runner
+            .program()
+            .macros
+            .iter()
+            .filter(|macro_spec| macro_spec.enabled)
+            .collect::<Vec<_>>();
         MacroStatus {
             active: true,
             running: snapshot.running,
             stopped: snapshot.stopped,
             last_event: snapshot.last_event,
-            name: Some(runner.program().name.clone()),
-            enabled: runner.program().enabled,
+            name: Some(match enabled_macros.as_slice() {
+                [macro_spec] => macro_spec.name.clone(),
+                _ => format!("{} 个宏", enabled_macros.len()),
+            }),
+            enabled: !enabled_macros.is_empty(),
             backend: Some(runner.program().backend.clone()),
-            task_count: runner.program().tasks.len(),
+            macro_count: runner.program().macros.len(),
+            enabled_macro_count: enabled_macros.len(),
+            task_count: enabled_macros
+                .iter()
+                .map(|macro_spec| macro_spec.tasks.len())
+                .sum(),
         }
     } else {
         MacroStatus {
@@ -189,6 +227,8 @@ fn status_from_runner(runner: Option<&ProgramHandle>) -> MacroStatus {
             name: None,
             enabled: true,
             backend: None,
+            macro_count: 0,
+            enabled_macro_count: 0,
             task_count: 0,
         }
     }

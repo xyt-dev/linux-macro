@@ -26,8 +26,8 @@ copies it to the new path on first launch. The old file is not deleted.
 ## Features
 
 - Desktop app and macro runner are the same Tauri application.
-- Graphical macro editor for enabling macros, selecting toggle keys, and editing
-  loop/sequence flows.
+- Graphical macro editor for multiple independent macros, each with its own
+  enable checkbox, drag-and-drop trigger assignment, and loop/sequence flows.
 - Advanced script editor for direct `.macro` edits.
 - Live syntax validation before saving.
 - Debounced real-time writes to `~/.config/linuxmacro/config.macro`.
@@ -43,11 +43,12 @@ copies it to the new path on first launch. The old file is not deleted.
 3. Rust loads and saves `~/.config/linuxmacro/config.macro`.
 4. Every save parses the script first. Invalid scripts are rejected instead of
    being written over the active config.
-5. The runtime parses the same config file and starts a background scheduler
-   thread.
-6. Toggle keys are read globally from Linux `/dev/input/event*`.
-7. On Wayland, key injection uses `ydotool key ...`; on X11 it can use
-   `xdotool key ...`.
+5. The runtime parses the same config file and starts one scheduler per enabled
+   macro.
+6. Trigger keys are read globally from Linux `/dev/input/event*`; pressing a
+   trigger toggles only the macro that owns that trigger.
+7. On Wayland, key and mouse injection use `ydotool`; on X11 they can use
+   `xdotool key ...` and `xdotool click ...`.
 8. `ydotool` and `xdotool` are launched directly as child processes from Rust.
    Python is not used.
 9. The optional installer runs package-manager commands in a blocking worker
@@ -196,37 +197,63 @@ LinuxMacro needs two different kinds of Linux access:
 The `.macro` format is line based:
 
 ```text
-name R and A demo
-description Press r every 1s and a every 0.4s.
-enabled on
 backend auto
-toggle side extra space browserback browserforward
-grab off
-start paused
 
-every 1s press r
-every 0.4s press a
+macro "Left clicker" {
+  description Toggle left click every 50ms with the side button.
+  enabled on
+  trigger side
+  start paused
+  every 50ms click left
+}
 
-sequence 3s {
-  press r
-  wait 200ms
-  press a
+macro "R then A" {
+  description Toggle a sequence with the extra button.
+  enabled on
+  trigger extra
+  start paused
+
+  sequence 3s {
+    press r
+    wait 200ms
+    click left
+    press a
+  }
 }
 ```
 
 Supported statements:
 
-- `name <text>`
-- `description <text>`
-- `enabled on|off`
-- `backend auto|ydotool|xdotool`
-- `toggle side|extra|space|browserback|browserforward|BTN_SIDE|BTN_EXTRA|KEY_SPACE`
-- `grab on|off`
-- `start paused|running`
-- `every <duration> press <key>`
-- `sequence <duration> { ... }` with `press <key>` and `wait <duration>`
+- Top level: `backend auto|ydotool|xdotool`
+- Macro block: `macro "name" { ... }`
+- Per macro: `description <text>`
+- Per macro: `enabled on|off`
+- Per macro: `trigger side|extra|browserback|browserforward|f1..f12|BTN_SIDE|BTN_EXTRA|KEY_F1`
+- Per macro: `start paused|running`
+- Per macro: `every <duration> press <key>`
+- Per macro: `every <duration> click left|right|middle|side|extra`
+- Per macro: `every <duration> hold <duration> press <key>`
+- Per macro: `every <duration> hold <duration> click left|right|middle|side|extra`
+- Per macro: `sequence <duration> { ... }` with `press <key>`, `click <button>`, `hold <duration> press|click <target>`, and `wait <duration>`
 
 Durations can be `1`, `1s`, or `200ms`.
+
+In the graphical editor, actions do not require choosing keyboard versus mouse.
+Targets such as `left`, `right`, `middle`, `side`, and `extra` are treated as
+mouse buttons; everything else is treated as a keyboard key. If you need to
+force an ambiguous target, use `key:left` or `mouse:left`.
+
+Each enabled macro must use different trigger keys. The parser rejects configs
+where two enabled macros share the same trigger, because one physical button
+should not toggle two different macros accidentally. Disabled macros may keep
+their old triggers until you enable them. The graphical editor intentionally
+offers only safer trigger keys: side/extra mouse buttons, browser back/forward,
+and F1-F12. It does not offer letters, digits, space, or primary mouse clicks
+as enable keys.
+
+Legacy single-macro configs using top-level `name`, `toggle`, `every`, and
+`sequence` are still accepted and are converted by the graphical editor into a
+single `macro "name" { ... }` block on save.
 
 ## Development Checks
 

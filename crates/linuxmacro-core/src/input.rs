@@ -1,4 +1,4 @@
-use crate::{MacroProgram, parser::normalize_evdev_trigger, runtime::RuntimeState};
+use crate::{parser::normalize_evdev_trigger, runtime::RuntimeState};
 use std::{
     collections::HashMap,
     fs::{self, File},
@@ -20,6 +20,20 @@ const TIMEVAL_BYTES: usize = 16;
 const TIMEVAL_BYTES: usize = 8;
 
 const INPUT_EVENT_BYTES: usize = TIMEVAL_BYTES + 8;
+
+#[derive(Clone)]
+pub struct ToggleBinding {
+    pub macro_name: String,
+    pub trigger_names: Vec<String>,
+    pub state: RuntimeState,
+}
+
+#[derive(Clone)]
+struct TriggerTarget {
+    macro_name: String,
+    trigger_name: String,
+    state: RuntimeState,
+}
 
 pub fn input_event_paths() -> Vec<PathBuf> {
     let mut paths = fs::read_dir("/dev/input")
@@ -49,6 +63,13 @@ pub fn event_device_name(path: &Path) -> Option<String> {
 
 pub fn trigger_code(trigger_name: &str) -> Option<u16> {
     let normalized = normalize_evdev_trigger(trigger_name);
+    if let Some(function_key) = normalized
+        .strip_prefix("KEY_F")
+        .and_then(|number| number.parse::<u8>().ok())
+    {
+        return linux_function_code(function_key);
+    }
+
     if let Some(letter) = normalized.strip_prefix("KEY_") {
         if letter.len() == 1 {
             let character = letter.chars().next()?;
@@ -62,6 +83,9 @@ pub fn trigger_code(trigger_name: &str) -> Option<u16> {
     }
 
     Some(match normalized.as_str() {
+        "BTN_LEFT" => 272,
+        "BTN_RIGHT" => 273,
+        "BTN_MIDDLE" => 274,
         "BTN_SIDE" => 275,
         "BTN_EXTRA" => 276,
         "KEY_SPACE" => 57,
@@ -74,20 +98,39 @@ pub fn trigger_code(trigger_name: &str) -> Option<u16> {
     })
 }
 
-pub fn start_toggle_listener(program: &MacroProgram, state: &RuntimeState) {
-    let trigger_codes = program
-        .toggle_buttons
+pub fn start_toggle_listener(bindings: Vec<ToggleBinding>) {
+    let states = bindings
         .iter()
-        .filter_map(|name| trigger_code(name).map(|code| (code, name.clone())))
-        .collect::<HashMap<_, _>>();
+        .map(|binding| binding.state.clone())
+        .collect::<Vec<_>>();
+    let mut trigger_codes = HashMap::<u16, Vec<TriggerTarget>>::new();
+    let mut trigger_names = Vec::new();
+
+    for binding in bindings {
+        for trigger_name in binding.trigger_names {
+            if let Some(code) = trigger_code(&trigger_name) {
+                if !trigger_names.contains(&trigger_name) {
+                    trigger_names.push(trigger_name.clone());
+                }
+                trigger_codes.entry(code).or_default().push(TriggerTarget {
+                    macro_name: binding.macro_name.clone(),
+                    trigger_name,
+                    state: binding.state.clone(),
+                });
+            }
+        }
+    }
 
     if trigger_codes.is_empty() {
-        state.set_message("toggle listener unavailable: no valid trigger names");
+        set_all_messages(
+            &states,
+            "toggle listener unavailable: no valid trigger names",
+        );
         return;
     }
 
     let trigger_codes = Arc::new(trigger_codes);
-    let last_toggle = Arc::new(Mutex::new(None));
+    let last_toggle = Arc::new(Mutex::new(HashMap::new()));
     let mut opened = 0usize;
     let mut errors = Vec::new();
 
@@ -106,7 +149,6 @@ pub fn start_toggle_listener(program: &MacroProgram, state: &RuntimeState) {
                     path,
                     file,
                     Arc::clone(&trigger_codes),
-                    state.clone(),
                     Arc::clone(&last_toggle),
                 );
             }
@@ -119,25 +161,27 @@ pub fn start_toggle_listener(program: &MacroProgram, state: &RuntimeState) {
     if opened == 0 {
         let detail = errors.into_iter().take(3).collect::<Vec<_>>().join("; ");
         if detail.is_empty() {
-            state.set_message("toggle listener unavailable: no /dev/input/event* devices");
+            set_all_messages(
+                &states,
+                "toggle listener unavailable: no /dev/input/event* devices",
+            );
         } else {
-            state.set_message(format!("toggle listener unavailable ({detail})"));
+            set_all_messages(&states, format!("toggle listener unavailable ({detail})"));
         }
         return;
     }
 
-    state.set_message(format!(
-        "listening for {}",
-        program.toggle_buttons.join(", ")
-    ));
+    set_all_messages(
+        &states,
+        format!("listening for {}", trigger_names.join(", ")),
+    );
 }
 
 fn spawn_reader_thread(
     path: PathBuf,
     mut file: File,
-    trigger_codes: Arc<HashMap<u16, String>>,
-    state: RuntimeState,
-    last_toggle: Arc<Mutex<Option<Instant>>>,
+    trigger_codes: Arc<HashMap<u16, Vec<TriggerTarget>>>,
+    last_toggle: Arc<Mutex<HashMap<u16, Instant>>>,
 ) {
     let name = path
         .file_name()
@@ -149,17 +193,13 @@ fn spawn_reader_thread(
         .name(format!("linuxmacro-toggle-{name}"))
         .spawn(move || {
             let mut buffer = [0u8; INPUT_EVENT_BYTES];
-            while !state.is_stopped() {
+            while !all_targets_stopped(trigger_codes.as_ref()) {
                 match file.read_exact(&mut buffer) {
                     Ok(()) => {
                         if let Some((event_type, code, value)) = parse_input_event(&buffer) {
                             if event_type == EV_KEY && value == KEY_DOWN {
-                                if let Some(trigger_name) = trigger_codes.get(&code) {
-                                    toggle_with_debounce(
-                                        &state,
-                                        trigger_name,
-                                        Arc::clone(&last_toggle),
-                                    );
+                                if let Some(targets) = trigger_codes.get(&code) {
+                                    toggle_with_debounce(targets, code, Arc::clone(&last_toggle));
                                 }
                             }
                         }
@@ -202,18 +242,33 @@ fn parse_input_event(buffer: &[u8; INPUT_EVENT_BYTES]) -> Option<(u16, u16, i32)
     Some((event_type, code, value))
 }
 
+fn set_all_messages(states: &[RuntimeState], message: impl Into<String>) {
+    let message = message.into();
+    for state in states {
+        state.set_message(message.clone());
+    }
+}
+
+fn all_targets_stopped(trigger_codes: &HashMap<u16, Vec<TriggerTarget>>) -> bool {
+    trigger_codes
+        .values()
+        .flat_map(|targets| targets.iter())
+        .all(|target| target.state.is_stopped())
+}
+
 fn toggle_with_debounce(
-    state: &RuntimeState,
-    trigger_name: &str,
-    last_toggle: Arc<Mutex<Option<Instant>>>,
+    targets: &[TriggerTarget],
+    code: u16,
+    last_toggle: Arc<Mutex<HashMap<u16, Instant>>>,
 ) {
     let now = Instant::now();
     let should_toggle = {
         let mut last_toggle = last_toggle.lock().expect("last_toggle mutex poisoned");
         if last_toggle
-            .is_none_or(|previous| now.duration_since(previous) >= Duration::from_millis(250))
+            .get(&code)
+            .is_none_or(|previous| now.duration_since(*previous) >= Duration::from_millis(250))
         {
-            *last_toggle = Some(now);
+            last_toggle.insert(code, now);
             true
         } else {
             false
@@ -221,7 +276,11 @@ fn toggle_with_debounce(
     };
 
     if should_toggle {
-        state.toggle(trigger_name);
+        for target in targets {
+            target
+                .state
+                .toggle(&format!("{} ({})", target.trigger_name, target.macro_name));
+        }
     }
 }
 
@@ -269,6 +328,36 @@ fn linux_digit_code(character: char) -> Option<u16> {
         '8' => 9,
         '9' => 10,
         '0' => 11,
+        _ => return None,
+    })
+}
+
+fn linux_function_code(number: u8) -> Option<u16> {
+    Some(match number {
+        1 => 59,
+        2 => 60,
+        3 => 61,
+        4 => 62,
+        5 => 63,
+        6 => 64,
+        7 => 65,
+        8 => 66,
+        9 => 67,
+        10 => 68,
+        11 => 87,
+        12 => 88,
+        13 => 183,
+        14 => 184,
+        15 => 185,
+        16 => 186,
+        17 => 187,
+        18 => 188,
+        19 => 189,
+        20 => 190,
+        21 => 191,
+        22 => 192,
+        23 => 193,
+        24 => 194,
         _ => return None,
     })
 }

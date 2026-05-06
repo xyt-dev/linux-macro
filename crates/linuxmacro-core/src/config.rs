@@ -10,23 +10,35 @@ pub const CONFIG_FILE_NAME: &str = "config.macro";
 pub const DEFAULT_CONFIG: &str = r#"# LinuxMacro configuration
 # This file is edited live by the Tauri UI.
 
-name R and A demo
-description Press r every 1s and a every 0.4s. Starts paused; side/extra/space toggles.
-enabled on
 backend auto
-toggle extra browserforward space
-grab off
-start paused
 
-every 1s press r
-every 0.4s press a
+macro "Left clicker" {
+  description Toggle left click every 50ms with the side button.
+  enabled on
+  trigger side
+  start paused
+  every 50ms click left
+}
+
+macro "R burst" {
+  description Toggle r every 100ms with the extra button.
+  enabled off
+  trigger extra
+  start paused
+  every 100ms press r
+}
 
 # Sequence example:
 #
-# sequence 3s {
-#   press r
-#   wait 200ms
-#   press a
+# macro "R then A" {
+#   enabled off
+#   trigger browserforward
+#   start paused
+#   sequence 3s {
+#     press r
+#     wait 200ms
+#     press a
+#   }
 # }
 "#;
 

@@ -57,6 +57,12 @@ pub enum KeyBackend {
     Xdotool { key_name: String },
 }
 
+#[derive(Clone, Debug)]
+pub enum MouseButtonBackend {
+    Ydotool { button: String },
+    Xdotool { button: String },
+}
+
 #[derive(Clone, Copy, Debug)]
 struct InstallPlan {
     shell_command: &'static str,
@@ -66,20 +72,89 @@ struct InstallPlan {
 
 impl KeyBackend {
     pub fn press_once(&self) -> RuntimeResult<()> {
+        self.key_down()?;
+        self.key_up()
+    }
+
+    pub fn key_down(&self) -> RuntimeResult<()> {
         match self {
             Self::Ydotool { code } => run_command(
                 "ydotool",
-                &["key".to_string(), format!("{code}:1"), format!("{code}:0")],
+                &["key".to_string(), format!("{code}:1")],
                 "ydotool failed. Make sure ydotoold is running:\n  systemctl --user enable --now ydotool.service",
             ),
             Self::Xdotool { key_name } => run_command(
                 "xdotool",
                 &[
-                    "key".to_string(),
+                    "keydown".to_string(),
                     "--clearmodifiers".to_string(),
                     key_name.clone(),
                 ],
                 "xdotool failed",
+            ),
+        }
+    }
+
+    pub fn key_up(&self) -> RuntimeResult<()> {
+        match self {
+            Self::Ydotool { code } => run_command(
+                "ydotool",
+                &["key".to_string(), format!("{code}:0")],
+                "ydotool failed. Make sure ydotoold is running:\n  systemctl --user enable --now ydotool.service",
+            ),
+            Self::Xdotool { key_name } => run_command(
+                "xdotool",
+                &[
+                    "keyup".to_string(),
+                    "--clearmodifiers".to_string(),
+                    key_name.clone(),
+                ],
+                "xdotool failed",
+            ),
+        }
+    }
+}
+
+impl MouseButtonBackend {
+    pub fn click_once(&self) -> RuntimeResult<()> {
+        self.button_down()?;
+        self.button_up()
+    }
+
+    pub fn button_down(&self) -> RuntimeResult<()> {
+        match self {
+            Self::Ydotool { button } => run_command(
+                "ydotool",
+                &["click".to_string(), ydotool_button_down(button).to_string()],
+                "ydotool click failed. Make sure ydotoold is running:\n  systemctl --user enable --now ydotool.service",
+            ),
+            Self::Xdotool { button } => run_command(
+                "xdotool",
+                &[
+                    "mousedown".to_string(),
+                    "--clearmodifiers".to_string(),
+                    button.clone(),
+                ],
+                "xdotool click failed",
+            ),
+        }
+    }
+
+    pub fn button_up(&self) -> RuntimeResult<()> {
+        match self {
+            Self::Ydotool { button } => run_command(
+                "ydotool",
+                &["click".to_string(), ydotool_button_up(button).to_string()],
+                "ydotool click failed. Make sure ydotoold is running:\n  systemctl --user enable --now ydotool.service",
+            ),
+            Self::Xdotool { button } => run_command(
+                "xdotool",
+                &[
+                    "mouseup".to_string(),
+                    "--clearmodifiers".to_string(),
+                    button.clone(),
+                ],
+                "xdotool click failed",
             ),
         }
     }
@@ -98,6 +173,40 @@ pub fn create_backend(backend_name: &str, key: &str) -> RuntimeResult<KeyBackend
         "xdotool" => Ok(KeyBackend::Xdotool {
             key_name: xdotool_key_name(key).to_string(),
         }),
+        "pynput" => Err(MacroRuntimeError::new(
+            "pynput is a Python backend and is not available in the Rust rewrite; use ydotool or xdotool",
+        )),
+        other => Err(MacroRuntimeError::new(format!(
+            "unsupported backend {other:?}"
+        ))),
+    }
+}
+
+pub fn create_mouse_button_backend(
+    backend_name: &str,
+    button: &str,
+) -> RuntimeResult<MouseButtonBackend> {
+    match backend_name {
+        "ydotool" => {
+            let button = ydotool_click_button(button).ok_or_else(|| {
+                MacroRuntimeError::new(format!(
+                    "ydotool backend does not support mouse button {button:?}; use left, right, middle, side, or extra"
+                ))
+            })?;
+            Ok(MouseButtonBackend::Ydotool {
+                button: button.to_string(),
+            })
+        }
+        "xdotool" => {
+            let button = xdotool_click_button(button).ok_or_else(|| {
+                MacroRuntimeError::new(format!(
+                    "xdotool backend does not support mouse button {button:?}; use left, right, middle, side, or extra"
+                ))
+            })?;
+            Ok(MouseButtonBackend::Xdotool {
+                button: button.to_string(),
+            })
+        }
         "pynput" => Err(MacroRuntimeError::new(
             "pynput is a Python backend and is not available in the Rust rewrite; use ydotool or xdotool",
         )),
@@ -427,6 +536,13 @@ fn command_output_detail(output: &std::process::Output) -> String {
 }
 
 fn ydotool_key_code(key: &str) -> Option<u16> {
+    if let Some(function_key) = key
+        .strip_prefix('f')
+        .and_then(|number| number.parse::<u8>().ok())
+    {
+        return linux_function_code(function_key);
+    }
+
     Some(match key {
         "a" => 30,
         "b" => 48,
@@ -494,6 +610,30 @@ fn ydotool_key_code(key: &str) -> Option<u16> {
 
 fn xdotool_key_name(key: &str) -> &str {
     match key {
+        "f1" => "F1",
+        "f2" => "F2",
+        "f3" => "F3",
+        "f4" => "F4",
+        "f5" => "F5",
+        "f6" => "F6",
+        "f7" => "F7",
+        "f8" => "F8",
+        "f9" => "F9",
+        "f10" => "F10",
+        "f11" => "F11",
+        "f12" => "F12",
+        "f13" => "F13",
+        "f14" => "F14",
+        "f15" => "F15",
+        "f16" => "F16",
+        "f17" => "F17",
+        "f18" => "F18",
+        "f19" => "F19",
+        "f20" => "F20",
+        "f21" => "F21",
+        "f22" => "F22",
+        "f23" => "F23",
+        "f24" => "F24",
         "-" => "minus",
         "=" => "equal",
         "[" => "bracketleft",
@@ -519,4 +659,78 @@ fn xdotool_key_name(key: &str) -> &str {
         "alt" => "Alt_L",
         other => other,
     }
+}
+
+fn ydotool_click_button(button: &str) -> Option<&'static str> {
+    Some(match button {
+        "left" => "0xC0",
+        "right" => "0xC1",
+        "middle" => "0xC2",
+        "side" => "0xC3",
+        "extra" => "0xC4",
+        _ => return None,
+    })
+}
+
+fn ydotool_button_down(button: &str) -> &str {
+    match button {
+        "0xC0" => "0x40",
+        "0xC1" => "0x41",
+        "0xC2" => "0x42",
+        "0xC3" => "0x43",
+        "0xC4" => "0x44",
+        _ => button,
+    }
+}
+
+fn ydotool_button_up(button: &str) -> &str {
+    match button {
+        "0xC0" => "0x80",
+        "0xC1" => "0x81",
+        "0xC2" => "0x82",
+        "0xC3" => "0x83",
+        "0xC4" => "0x84",
+        _ => button,
+    }
+}
+
+fn xdotool_click_button(button: &str) -> Option<&'static str> {
+    Some(match button {
+        "left" => "1",
+        "middle" => "2",
+        "right" => "3",
+        "side" => "8",
+        "extra" => "9",
+        _ => return None,
+    })
+}
+
+fn linux_function_code(number: u8) -> Option<u16> {
+    Some(match number {
+        1 => 59,
+        2 => 60,
+        3 => 61,
+        4 => 62,
+        5 => 63,
+        6 => 64,
+        7 => 65,
+        8 => 66,
+        9 => 67,
+        10 => 68,
+        11 => 87,
+        12 => 88,
+        13 => 183,
+        14 => 184,
+        15 => 185,
+        16 => 186,
+        17 => 187,
+        18 => 188,
+        19 => 189,
+        20 => 190,
+        21 => 191,
+        22 => 192,
+        23 => 193,
+        24 => 194,
+        _ => return None,
+    })
 }
