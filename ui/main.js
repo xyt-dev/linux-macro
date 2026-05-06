@@ -30,53 +30,305 @@ const visualName = document.querySelector("#visualName");
 const visualDescription = document.querySelector("#visualDescription");
 const visualBackend = document.querySelector("#visualBackend");
 const visualStart = document.querySelector("#visualStart");
+const languageToggle = document.querySelector("#languageToggle");
 const triggerSuggestions = document.querySelector("#triggerSuggestions");
 const triggerChips = document.querySelector("#triggerChips");
-const addEveryTaskButton = document.querySelector("#addEveryTask");
-const addSequenceTaskButton = document.querySelector("#addSequenceTask");
+const addFlowTaskButton = document.querySelector("#addFlowTask");
 const flowTasks = document.querySelector("#flowTasks");
 
 const TRIGGER_OPTIONS = [
-  ["side", "BTN_SIDE", "鼠标侧键 / mouse4 / back"],
-  ["extra", "BTN_EXTRA", "鼠标额外键 / mouse5 / forward"],
-  ["browserback", "KEY_BACK", "浏览器后退"],
-  ["browserforward", "KEY_FORWARD", "浏览器前进"],
+  ["side", "BTN_SIDE", { en: "Mouse side button / mouse4 / back", zh: "鼠标侧键 / mouse4 / back" }],
+  ["extra", "BTN_EXTRA", { en: "Mouse extra button / mouse5 / forward", zh: "鼠标额外键 / mouse5 / forward" }],
+  ["browserback", "KEY_BACK", { en: "Browser back", zh: "浏览器后退" }],
+  ["browserforward", "KEY_FORWARD", { en: "Browser forward", zh: "浏览器前进" }],
   ...Array.from({ length: 12 }, (_, index) => {
     const key = `f${index + 1}`;
-    return [key, `KEY_F${index + 1}`, `功能键 ${key.toUpperCase()}`];
+    return [key, `KEY_F${index + 1}`, { en: `Function key ${key.toUpperCase()}`, zh: `功能键 ${key.toUpperCase()}` }];
   }),
 ];
 
 const ACTION_TARGET_OPTIONS = [
-  ["left", "鼠标左键", "mouse1 / leftclick"],
-  ["right", "鼠标右键", "mouse2 / rightclick"],
-  ["middle", "鼠标中键", "mouse3 / middleclick"],
-  ["side", "鼠标侧键", "mouse4 / back"],
-  ["extra", "鼠标额外键", "mouse5 / forward"],
-  ["space", "空格键", "keyboard"],
-  ["enter", "回车", "keyboard"],
+  ["left", { en: "Left mouse button", zh: "鼠标左键" }, "mouse1 / leftclick"],
+  ["right", { en: "Right mouse button", zh: "鼠标右键" }, "mouse2 / rightclick"],
+  ["middle", { en: "Middle mouse button", zh: "鼠标中键" }, "mouse3 / middleclick"],
+  ["side", { en: "Mouse side button", zh: "鼠标侧键" }, "mouse4 / back"],
+  ["extra", { en: "Mouse extra button", zh: "鼠标额外键" }, "mouse5 / forward"],
+  ["space", { en: "Space", zh: "空格键" }, "keyboard"],
+  ["enter", { en: "Enter", zh: "回车" }, "keyboard"],
   ["tab", "Tab", "keyboard"],
   ["esc", "Esc", "keyboard"],
-  ["backspace", "退格", "keyboard"],
-  ["delete", "删除", "keyboard"],
-  ["key:left", "方向左", "强制键盘"],
-  ["key:right", "方向右", "强制键盘"],
-  ["up", "方向上", "keyboard"],
-  ["down", "方向下", "keyboard"],
+  ["backspace", { en: "Backspace", zh: "退格" }, "keyboard"],
+  ["delete", { en: "Delete", zh: "删除" }, "keyboard"],
+  ["key:left", { en: "Arrow left", zh: "方向左" }, { en: "force keyboard", zh: "强制键盘" }],
+  ["key:right", { en: "Arrow right", zh: "方向右" }, { en: "force keyboard", zh: "强制键盘" }],
+  ["up", { en: "Arrow up", zh: "方向上" }, "keyboard"],
+  ["down", { en: "Arrow down", zh: "方向下" }, "keyboard"],
   ["ctrl", "Ctrl", "keyboard"],
   ["shift", "Shift", "keyboard"],
   ["alt", "Alt", "keyboard"],
-  ...Array.from("abcdefghijklmnopqrstuvwxyz", (key) => [key, `字母 ${key.toUpperCase()}`, "keyboard"]),
-  ...Array.from("0123456789", (key) => [key, `数字 ${key}`, "keyboard"]),
+  ...Array.from("abcdefghijklmnopqrstuvwxyz", (key) => [key, { en: `Letter ${key.toUpperCase()}`, zh: `字母 ${key.toUpperCase()}` }, "keyboard"]),
+  ...Array.from("0123456789", (key) => [key, { en: `Number ${key}`, zh: `数字 ${key}` }, "keyboard"]),
   ...Array.from({ length: 12 }, (_, index) => {
     const key = `f${index + 1}`;
-    return [key, `功能键 ${key.toUpperCase()}`, "keyboard"];
+    return [key, { en: `Function key ${key.toUpperCase()}`, zh: `功能键 ${key.toUpperCase()}` }, "keyboard"];
   }),
 ];
+
+const I18N = {
+  en: {
+    "app.title": "Macro Console",
+    "nav.aria": "Page navigation",
+    "tab.control": "Control",
+    "tab.visual": "Visual Editor",
+    "tab.advanced": "Advanced Script",
+    "api.title": "Desktop UI and Rust backend IPC state",
+    "api.connecting": "Connecting backend",
+    "api.connected": "Backend connected",
+    "api.disconnected": "Backend disconnected",
+    "control.runner": "Macro Runner",
+    "control.notRunningCopy": "Click start to read the current config file and run all enabled macros.",
+    "config.title": "Config File",
+    "config.copy": "Always reads and writes the Linux config directory. No command-line file path is needed.",
+    "backend.title": "Input Backend",
+    "backend.copy": "Rust launches ydotool/xdotool directly. Python is not used.",
+    "backend.install": "Install/Start ydotool",
+    "backend.checking": "Checking",
+    "backend.unknown": "Unknown",
+    "backend.missing": "Missing backend",
+    "backend.error": "Error",
+    "backend.installing": "Installing",
+    "backend.installFailed": "Install failed",
+    "backend.session": "Session",
+    "backend.installed": "installed",
+    "backend.notInstalled": "not installed",
+    "backend.manualInstall": "Unrecognized package manager. Install ydotool manually.",
+    "backend.installHint": "Command: {command}",
+    "backend.installAuth": "Requesting administrator authorization to install ydotool. Confirm the system prompt.",
+    "theme.title": "Theme",
+    "theme.copy": "Switch between Catppuccin Mocha and Light themes.",
+    "theme.light": "Light",
+    "theme.mocha": "Mocha",
+    "language.title": "Language",
+    "language.copy": "Switch the interface language. English is the default.",
+    "language.toggle": "中文",
+    "visual.title": "Visual Editor",
+    "macroList.title": "Macros",
+    "macroList.add": "Add Macro",
+    "macroList.enabled": "Enabled",
+    "macroList.noTriggers": "No triggers",
+    "macroList.deleteAria": "Delete macro",
+    "macroSettings.title": "Macro Settings: {name}",
+    "field.name": "Name",
+    "field.namePlaceholder": "Macro name",
+    "field.description": "Description",
+    "field.descriptionPlaceholder": "Macro description",
+    "field.backend": "Global Backend",
+    "field.startState": "Start State",
+    "triggers.title": "Trigger Keys",
+    "triggers.copy": "Drag to a macro card on the left, or click to add to the current macro. Only side buttons, browser keys, and F1-F12 are offered.",
+    "triggers.usedBy": " · used by {name}",
+    "flow.title": "Independent Flows",
+    "flow.addIndependent": "Add Independent Flow",
+    "flow.independent": "Independent Flow",
+    "flow.delete": "Delete flow",
+    "flow.action": "Action",
+    "flow.tap": "Tap",
+    "flow.hold": "Hold",
+    "flow.wait": "Wait",
+    "flow.periodSeconds": "Period (s)",
+    "flow.waitSeconds": "Wait (s)",
+    "flow.holdSeconds": "Hold seconds",
+    "flow.addAction": "Add Action",
+    "flow.addWait": "Add Wait",
+    "flow.deleteStep": "Delete step",
+    "advanced.title": "Advanced Script",
+    "save.now": "Save Now",
+    "editor.placeholder": "Loading ~/.config/linuxmacro/config.macro...",
+    "snippets.title": "Quick Insert",
+    "snippets.independentFlow": "Independent Flow",
+    "snippets.mouseAction": "Mouse Flow",
+    "snippets.holdAction": "Hold Flow",
+    "snippets.sequence": "Multi-step Flow",
+    "snippets.macroBlock": "Macro Block",
+    "snippets.startState": "Start State",
+    "validation.title": "Validation",
+    "validation.unchecked": "Unchecked",
+    "validation.valid": "Valid",
+    "validation.invalid": "Invalid",
+    "validation.default": "Save to show parse results here.",
+    "validation.success": "Parsed: {macros} macros, {tasks} tasks, {lines} lines.",
+    "validation.fix": "Fix syntax errors to show macro info.",
+    "summary.title": "Macro Info",
+    "summary.empty": "No macro info.",
+    "summary.backend": "Backend",
+    "summary.macros": "Macros",
+    "summary.tasks": "Tasks",
+    "summary.triggers": "Triggers",
+    "summary.enabledCount": "{enabled}/{total} enabled",
+    "summary.taskCount": "{count} tasks",
+    "tasks.title": "Task Preview",
+    "tasks.empty": "No task preview.",
+    "syntax.title": "Syntax Quick Reference",
+    "status.notRunning": "Not Running",
+    "status.stopped": "Stopped",
+    "status.running": "Running",
+    "status.paused": "Paused",
+    "status.error": "Error",
+    "status.reloadFailed": "Reload failed",
+    "status.waitingLoad": "Waiting to load",
+    "status.runtime": "{name} · {backend} · {enabled}/{total} macros enabled · {tasks} tasks · {event}",
+    "power.start": "Start",
+    "power.stop": "Stop",
+    "power.startAria": "Start macro",
+    "power.stopAria": "Stop macro",
+    "counts.lines": "{count} lines",
+    "counts.chars": "{count} chars",
+    "save.waiting": "Waiting to save",
+    "save.checking": "Checking…",
+    "save.saved": "Saved {time}",
+    "save.savedReloading": "Saved, reloading runner…",
+    "save.savedReloaded": "Saved and reloaded {time}",
+    "save.syntaxOk": "Syntax OK, saved {time}",
+    "save.syntaxReloaded": "Syntax OK, reloaded {time}",
+    "save.syntaxError": "Syntax error, not saved",
+    "save.reloadFailed": "Saved, reload failed",
+    "save.synced": "Synced, waiting to save",
+    "load.loaded": "Loaded",
+    "load.failed": "Load failed",
+    "load.syntaxError": "Config has syntax errors",
+    "runtime.oldConfig": "Still using the previous runtime config: {message}",
+    "install.installingButton": "Installing…",
+  },
+  zh: {
+    "app.title": "宏控制台",
+    "nav.aria": "页面切换",
+    "tab.control": "控制台",
+    "tab.visual": "图形编辑",
+    "tab.advanced": "高级脚本",
+    "api.title": "桌面界面和 Rust 后端通信状态",
+    "api.connecting": "正在连接后端",
+    "api.connected": "后端已连接",
+    "api.disconnected": "后端未连接",
+    "control.runner": "宏运行器",
+    "control.notRunningCopy": "点击启动会读取当前配置文件，并运行所有已启用宏。",
+    "config.title": "配置文件",
+    "config.copy": "固定读取和写入 Linux 配置目录，无需命令行手动传入。",
+    "backend.title": "输入后端",
+    "backend.copy": "Rust 会直接启动 ydotool/xdotool 进程，不通过 Python。",
+    "backend.install": "安装/启动 ydotool",
+    "backend.checking": "检测中",
+    "backend.unknown": "未知",
+    "backend.missing": "缺少后端",
+    "backend.error": "错误",
+    "backend.installing": "安装中",
+    "backend.installFailed": "安装失败",
+    "backend.session": "会话",
+    "backend.installed": "已安装",
+    "backend.notInstalled": "未安装",
+    "backend.manualInstall": "未识别包管理器，请手动安装 ydotool。",
+    "backend.installHint": "可执行：{command}",
+    "backend.installAuth": "正在请求管理员授权安装 ydotool，请确认系统弹窗。",
+    "theme.title": "主题",
+    "theme.copy": "在 Catppuccin Mocha 和 Light 配色之间切换。",
+    "theme.light": "Light",
+    "theme.mocha": "Mocha",
+    "language.title": "语言",
+    "language.copy": "切换界面语言。默认使用英文。",
+    "language.toggle": "English",
+    "visual.title": "图形编辑",
+    "macroList.title": "宏列表",
+    "macroList.add": "新增宏",
+    "macroList.enabled": "启用",
+    "macroList.noTriggers": "未设置触发键",
+    "macroList.deleteAria": "删除宏",
+    "macroSettings.title": "宏设置：{name}",
+    "field.name": "名称",
+    "field.namePlaceholder": "宏名称",
+    "field.description": "描述",
+    "field.descriptionPlaceholder": "宏说明",
+    "field.backend": "全局后端",
+    "field.startState": "启动状态",
+    "triggers.title": "启用键",
+    "triggers.copy": "拖到左侧宏卡片分配，或点击加入当前宏。只提供侧键、浏览器键和 F1-F12。",
+    "triggers.usedBy": " · 已由 {name} 使用",
+    "flow.title": "独立流程",
+    "flow.addIndependent": "添加新独立流程",
+    "flow.independent": "独立流程",
+    "flow.delete": "删除流程",
+    "flow.action": "动作",
+    "flow.tap": "短按",
+    "flow.hold": "长按",
+    "flow.wait": "等待",
+    "flow.periodSeconds": "周期(s)",
+    "flow.waitSeconds": "等待(s)",
+    "flow.holdSeconds": "长按秒数",
+    "flow.addAction": "添加动作",
+    "flow.addWait": "添加等待",
+    "flow.deleteStep": "删除步骤",
+    "advanced.title": "高级脚本",
+    "save.now": "立即保存",
+    "editor.placeholder": "正在加载 ~/.config/linuxmacro/config.macro...",
+    "snippets.title": "快速插入",
+    "snippets.independentFlow": "独立流程",
+    "snippets.mouseAction": "鼠标流程",
+    "snippets.holdAction": "长按流程",
+    "snippets.sequence": "多步骤流程",
+    "snippets.macroBlock": "宏块",
+    "snippets.startState": "启动状态",
+    "validation.title": "校验结果",
+    "validation.unchecked": "未校验",
+    "validation.valid": "有效",
+    "validation.invalid": "有错误",
+    "validation.default": "保存后会在这里显示解析结果。",
+    "validation.success": "解析成功：{macros} 个宏，{tasks} 个任务，{lines} 行。",
+    "validation.fix": "修正语法后显示宏信息。",
+    "summary.title": "宏信息",
+    "summary.empty": "暂无宏信息。",
+    "summary.backend": "后端",
+    "summary.macros": "宏数量",
+    "summary.tasks": "任务",
+    "summary.triggers": "触发",
+    "summary.enabledCount": "{enabled}/{total} 启用",
+    "summary.taskCount": "{count} 个",
+    "tasks.title": "任务预览",
+    "tasks.empty": "暂无任务预览。",
+    "syntax.title": "语法速查",
+    "status.notRunning": "未运行",
+    "status.stopped": "已停止",
+    "status.running": "运行中",
+    "status.paused": "已暂停",
+    "status.error": "错误",
+    "status.reloadFailed": "重载失败",
+    "status.waitingLoad": "等待加载",
+    "status.runtime": "{name} · {backend} · {enabled}/{total} 个宏启用 · {tasks} 个任务 · {event}",
+    "power.start": "启动",
+    "power.stop": "停止",
+    "power.startAria": "启动宏",
+    "power.stopAria": "停止宏",
+    "counts.lines": "{count} 行",
+    "counts.chars": "{count} 字符",
+    "save.waiting": "等待保存",
+    "save.checking": "正在校验…",
+    "save.saved": "已保存 {time}",
+    "save.savedReloading": "已保存，正在重载运行器…",
+    "save.savedReloaded": "已保存并重载 {time}",
+    "save.syntaxOk": "语法正确，已保存 {time}",
+    "save.syntaxReloaded": "语法正确，已重载 {time}",
+    "save.syntaxError": "语法错误，未保存",
+    "save.reloadFailed": "已保存，重载失败",
+    "save.synced": "已同步，等待保存",
+    "load.loaded": "已加载",
+    "load.failed": "加载失败",
+    "load.syntaxError": "配置有语法错误",
+    "runtime.oldConfig": "当前仍在使用旧运行配置：{message}",
+    "install.installingButton": "安装中…",
+  },
+};
 
 const state = {
   saveTimer: null,
   validateToken: 0,
+  language: localStorage.getItem("linuxmacro-language") || "en",
   currentPath: "~/.config/linuxmacro/config.macro",
   currentMacroStatus: null,
   visualModel: defaultVisualModel(),
@@ -97,9 +349,49 @@ document.body.appendChild(targetSuggestionMenu);
 
 function invoke(command, args = {}) {
   if (!tauriInvoke) {
-    return Promise.reject(new Error("Tauri API 未连接，请在 Tauri 应用窗口中打开。"));
+    return Promise.reject(new Error(t("api.disconnected")));
   }
   return tauriInvoke(command, args);
+}
+
+function t(key, values = {}) {
+  const table = I18N[state.language] || I18N.en;
+  const fallback = I18N.en[key] || key;
+  const template = table[key] || fallback;
+  return template.replace(/\{(\w+)\}/g, (_, name) => values[name] ?? "");
+}
+
+function localized(value) {
+  if (value && typeof value === "object") return value[state.language] || value.en || "";
+  return String(value ?? "");
+}
+
+function setLanguage(language, options = {}) {
+  state.language = language === "zh" ? "zh" : "en";
+  localStorage.setItem("linuxmacro-language", state.language);
+  document.documentElement.lang = state.language === "zh" ? "zh-CN" : "en";
+  applyStaticTranslations();
+  setTheme(document.documentElement.dataset.theme || "mocha");
+  renderCounts();
+  renderVisualEditor();
+  if (state.currentMacroStatus) renderMacroStatus(state.currentMacroStatus);
+  if (options.validate) validateDraft({ syncVisual: false });
+}
+
+function applyStaticTranslations() {
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    element.textContent = t(element.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+    element.setAttribute("placeholder", t(element.dataset.i18nPlaceholder));
+  });
+  document.querySelectorAll("[data-i18n-title]").forEach((element) => {
+    element.setAttribute("title", t(element.dataset.i18nTitle));
+  });
+  document.querySelectorAll("[data-i18n-aria]").forEach((element) => {
+    element.setAttribute("aria-label", t(element.dataset.i18nAria));
+  });
+  languageToggle.textContent = t("language.toggle");
 }
 
 function defaultVisualModel() {
@@ -114,16 +406,16 @@ function defaultMacro(index = 0) {
   const defaults = [
     {
       enabled: true,
-      name: "左键连点",
-      description: "按下鼠标侧键切换左键 50ms 连点。",
+      name: "Left clicker",
+      description: "Toggle left click every 50ms with the side button.",
       startRunning: false,
       triggerButtons: ["BTN_SIDE"],
       tasks: [{ type: "every", interval: 0.05, steps: [{ kind: "click", button: "left" }] }],
     },
     {
       enabled: false,
-      name: "R 连发",
-      description: "按下鼠标额外键切换 r 连发。",
+      name: "R burst",
+      description: "Toggle r every 100ms with the extra button.",
       startRunning: false,
       triggerButtons: ["BTN_EXTRA"],
       tasks: [{ type: "every", interval: 0.1, steps: [{ kind: "press", key: "r" }] }],
@@ -132,7 +424,7 @@ function defaultMacro(index = 0) {
   if (defaults[index]) return JSON.parse(JSON.stringify(defaults[index]));
   return {
     enabled: true,
-    name: `宏 ${index + 1}`,
+    name: `Macro ${index + 1}`,
     description: "",
     startRunning: false,
     triggerButtons: [nextAvailableTrigger(index)],
@@ -143,7 +435,7 @@ function defaultMacro(index = 0) {
 function setTheme(theme) {
   document.documentElement.dataset.theme = theme;
   localStorage.setItem("linuxmacro-theme", theme);
-  themeToggle.textContent = theme === "mocha" ? "Light" : "Mocha";
+  themeToggle.textContent = theme === "mocha" ? t("theme.light") : t("theme.mocha");
 }
 
 function setSaveStatus(kind, text) {
@@ -158,8 +450,8 @@ function setVisualStatus(kind, text) {
 
 function renderCounts() {
   const lines = editor.value.length ? editor.value.split("\n").length : 0;
-  lineCount.textContent = `${lines} 行`;
-  charCount.textContent = `${editor.value.length} 字符`;
+  lineCount.textContent = t("counts.lines", { count: lines });
+  charCount.textContent = t("counts.chars", { count: editor.value.length });
   lineNumbers.innerHTML = Array.from({ length: Math.max(lines, 1) }, (_, index) => {
     return `<span>${index + 1}</span>`;
   }).join("");
@@ -168,25 +460,29 @@ function renderCounts() {
 function renderValidation(report, options = {}) {
   const syncVisual = options.syncVisual ?? true;
   if (!report) {
-    validationBadge.textContent = "未校验";
+    validationBadge.textContent = t("validation.unchecked");
     validationBadge.className = "pill";
     return;
   }
 
   if (report.ok) {
-    validationBadge.textContent = "有效";
+    validationBadge.textContent = t("validation.valid");
     validationBadge.className = "pill success";
-    validationMessage.textContent = `解析成功：${report.macro_count ?? 0} 个宏，${report.task_count} 个任务，${report.line_count} 行。`;
+    validationMessage.textContent = t("validation.success", {
+      macros: report.macro_count ?? 0,
+      tasks: report.task_count,
+      lines: report.line_count,
+    });
     renderProgram(report.program);
     if (syncVisual && !state.visualEditing) {
       syncVisualFromProgram(report.program);
     }
   } else {
-    validationBadge.textContent = "有错误";
+    validationBadge.textContent = t("validation.invalid");
     validationBadge.className = "pill danger";
-    validationMessage.textContent = report.error || "脚本解析失败。";
-    macroSummary.innerHTML = `<div class="empty">修正语法后显示宏信息。</div>`;
-    taskList.innerHTML = `<div class="empty">暂无任务预览。</div>`;
+    validationMessage.textContent = report.error || t("validation.invalid");
+    macroSummary.innerHTML = `<div class="empty">${escapeHtml(t("validation.fix"))}</div>`;
+    taskList.innerHTML = `<div class="empty">${escapeHtml(t("tasks.empty"))}</div>`;
   }
 }
 
@@ -194,39 +490,46 @@ function renderMacroStatus(status) {
   state.currentMacroStatus = status;
 
   if (!status?.active) {
-    macroStateBadge.textContent = "未运行";
+    macroStateBadge.textContent = t("status.notRunning");
     macroStateBadge.className = "pill";
-    macroStateText.textContent = "点击启动会读取当前配置文件，并运行所有已启用宏。";
+    macroStateText.textContent = t("control.notRunningCopy");
     renderPowerButton(false);
     return;
   }
 
   if (status.stopped) {
-    macroStateBadge.textContent = "已停止";
+    macroStateBadge.textContent = t("status.stopped");
     macroStateBadge.className = "pill danger";
   } else if (status.running) {
-    macroStateBadge.textContent = "运行中";
+    macroStateBadge.textContent = t("status.running");
     macroStateBadge.className = "pill success";
   } else {
-    macroStateBadge.textContent = "已暂停";
+    macroStateBadge.textContent = t("status.paused");
     macroStateBadge.className = "pill";
   }
 
   const backend = status.backend || "unknown";
   const name = status.name || "unnamed";
-  macroStateText.textContent = `${name} · ${backend} · ${status.enabled_macro_count ?? 0}/${status.macro_count ?? 0} 个宏启用 · ${status.task_count} 个任务 · ${status.last_event}`;
+  macroStateText.textContent = t("status.runtime", {
+    name,
+    backend,
+    enabled: status.enabled_macro_count ?? 0,
+    total: status.macro_count ?? 0,
+    tasks: status.task_count,
+    event: status.last_event,
+  });
   renderPowerButton(!status.stopped);
 }
 
 function renderPowerButton(active) {
   powerToggleButton.classList.toggle("active", active);
-  powerToggleButton.setAttribute("aria-label", active ? "停止宏" : "启动宏");
-  powerButtonText.textContent = active ? "停止" : "启动";
+  powerToggleButton.setAttribute("aria-label", active ? t("power.stopAria") : t("power.startAria"));
+  powerButtonText.textContent = active ? t("power.stop") : t("power.start");
 }
 
 function renderBackendHealth(health) {
   if (!health) {
-    backendBadge.textContent = "未知";
+    backendBadge.textContent = t("backend.unknown");
     backendBadge.className = "pill";
     return;
   }
@@ -235,20 +538,24 @@ function renderBackendHealth(health) {
     backendBadge.textContent = health.recommended_backend;
     backendBadge.className = "pill success";
   } else {
-    backendBadge.textContent = "缺少后端";
+    backendBadge.textContent = t("backend.missing");
     backendBadge.className = "pill danger";
   }
 
-  const installHint = health.install_command ? `可执行：${health.install_command}` : "未识别包管理器，请手动安装 ydotool。";
+  const installHint = health.install_command
+    ? t("backend.installHint", { command: health.install_command })
+    : t("backend.manualInstall");
   const notes = health.notes?.length ? ` ${health.notes.join(" ")}` : "";
-  backendMessage.textContent = `会话：${health.session_type}\nydotool：${health.ydotool_installed ? "已安装" : "未安装"}；xdotool：${health.xdotool_installed ? "已安装" : "未安装"}\n${installHint}${notes}`;
+  backendMessage.textContent = `${t("backend.session")}: ${health.session_type}\nydotool: ${
+    health.ydotool_installed ? t("backend.installed") : t("backend.notInstalled")
+  }; xdotool: ${health.xdotool_installed ? t("backend.installed") : t("backend.notInstalled")}\n${installHint}${notes}`;
   installYdotoolButton.disabled = health.ydotool_installed && health.systemctl_installed;
 }
 
 function renderProgram(program) {
   if (!program) {
-    macroSummary.innerHTML = `<div class="empty">暂无宏信息。</div>`;
-    taskList.innerHTML = `<div class="empty">暂无任务预览。</div>`;
+    macroSummary.innerHTML = `<div class="empty">${escapeHtml(t("summary.empty"))}</div>`;
+    taskList.innerHTML = `<div class="empty">${escapeHtml(t("tasks.empty"))}</div>`;
     return;
   }
 
@@ -256,10 +563,10 @@ function renderProgram(program) {
   const enabledCount = macros.filter((macro) => macro.enabled).length;
   const taskCount = macros.reduce((count, macro) => count + (macro.tasks?.length || 0), 0);
   macroSummary.innerHTML = [
-    ["后端", program.backend],
-    ["宏数量", `${enabledCount}/${macros.length} 启用`],
-    ["任务", `${taskCount} 个`],
-    ["触发", macros.map((macro) => `${macro.name}: ${(macro.trigger_buttons || []).join(", ")}`).join("；")],
+    [t("summary.backend"), program.backend],
+    [t("summary.macros"), t("summary.enabledCount", { enabled: enabledCount, total: macros.length })],
+    [t("summary.tasks"), t("summary.taskCount", { count: taskCount })],
+    [t("summary.triggers"), macros.map((macro) => `${macro.name}: ${(macro.trigger_buttons || []).join(", ")}`).join("; ")],
   ]
     .map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`)
     .join("");
@@ -310,7 +617,7 @@ function programMacros(program) {
 function macroToVisualMacro(macro, index) {
   return {
     enabled: macro.enabled ?? true,
-    name: macro.name || `宏 ${index + 1}`,
+    name: macro.name || `Macro ${index + 1}`,
     description: macro.description || "",
     startRunning: Boolean(macro.start_running),
     triggerButtons: [...(macro.trigger_buttons || macro.toggle_buttons || [nextAvailableTrigger(index)])],
@@ -334,7 +641,7 @@ function macroToVisualMacro(macro, index) {
 function renderVisualEditor() {
   const model = normalizeVisualModel(state.visualModel);
   const macro = currentMacro();
-  selectedMacroTitle.textContent = `宏设置：${macro.name}`;
+  selectedMacroTitle.textContent = t("macroSettings.title", { name: macro.name });
   visualName.value = macro.name;
   visualDescription.value = macro.description;
   visualBackend.value = model.backend;
@@ -367,7 +674,7 @@ function normalizeVisualModel(model) {
 
 function normalizeVisualMacro(macro, index) {
   macro.enabled = macro.enabled !== false;
-  macro.name = macro.name || `宏 ${index + 1}`;
+  macro.name = macro.name || `Macro ${index + 1}`;
   macro.description = macro.description || "";
   macro.startRunning = Boolean(macro.startRunning);
   macro.triggerButtons = Array.isArray(macro.triggerButtons) && macro.triggerButtons.length ? macro.triggerButtons : [nextAvailableTrigger(index)];
@@ -375,10 +682,17 @@ function normalizeVisualMacro(macro, index) {
   macro.tasks.forEach((task) => {
     task.interval = Number(task.interval) > 0 ? Number(task.interval) : 1;
     task.steps = Array.isArray(task.steps) && task.steps.length ? task.steps : [{ kind: "press", key: "space" }];
-    if (!task.type) task.type = task.steps.length === 1 && isInputStep(task.steps[0]) ? "every" : "sequence";
-    if (task.type === "every") task.steps = [firstActionStep(task)];
+    task.steps = task.steps.map(normalizeVisualStep);
+    task.type = task.steps.length === 1 && isInputStep(task.steps[0]) ? "every" : "sequence";
   });
   return macro;
+}
+
+function normalizeVisualStep(step) {
+  if (step?.kind === "wait") {
+    return { kind: "wait", seconds: positiveNumber(step.seconds, 0.2) };
+  }
+  return normalizeActionStep(step || { kind: "press", key: "space" });
 }
 
 function currentMacro() {
@@ -393,15 +707,15 @@ function renderMacroList() {
       const active = index === model.selectedMacroIndex;
       const triggers = macro.triggerButtons.join(" / ");
       return `<article class="macro-card ${active ? "active" : ""} ${macro.enabled ? "" : "disabled"}" data-macro-drop="${index}">
-        <label class="macro-enable" title="启用或禁用这个宏">
+        <label class="macro-enable">
           <input data-macro-enabled="${index}" type="checkbox" ${macro.enabled ? "checked" : ""} />
-          <span>启用</span>
+          <span>${escapeHtml(t("macroList.enabled"))}</span>
         </label>
         <button class="macro-select" data-select-macro="${index}" type="button">
           <strong>${escapeHtml(macro.name)}</strong>
-          <small>${escapeHtml(triggers || "未设置触发键")}</small>
+          <small>${escapeHtml(triggers || t("macroList.noTriggers"))}</small>
         </button>
-        <button class="delete-button macro-delete" data-remove-macro="${index}" type="button" aria-label="删除宏" ${model.macros.length <= 1 ? "disabled" : ""}>×</button>
+        <button class="delete-button macro-delete" data-remove-macro="${index}" type="button" aria-label="${escapeHtml(t("macroList.deleteAria"))}" ${model.macros.length <= 1 ? "disabled" : ""}>×</button>
       </article>`;
     })
     .join("");
@@ -429,11 +743,11 @@ function renderTriggerSuggestions() {
       const selected = macro.triggerButtons.includes(canonical);
       const owner = owners.get(canonical)?.find((item) => item.index !== model.selectedMacroIndex);
       const disabled = selected || Boolean(owner);
-      const ownerText = owner ? ` · 已由 ${owner.name} 使用` : "";
+      const ownerText = owner ? t("triggers.usedBy", { name: owner.name }) : "";
       return `<button class="suggestion-item" data-add-trigger="${escapeHtml(canonical)}" data-trigger-option="${escapeHtml(canonical)}" type="button" draggable="${disabled ? "false" : "true"}" ${disabled ? "disabled" : ""}>
         <strong>${escapeHtml(alias)}</strong>
         <span>${escapeHtml(canonical)}</span>
-        <small>${escapeHtml(description + ownerText)}</small>
+        <small>${escapeHtml(localized(description) + ownerText)}</small>
       </button>`;
     })
     .join("");
@@ -443,61 +757,33 @@ function renderFlowTasks() {
   const macro = currentMacro();
   flowTasks.innerHTML = macro.tasks
     .map((task, taskIndex) => {
-      const type = task.type === "sequence" ? "sequence" : "every";
-      const body = type === "every" ? renderEveryTask(task, taskIndex) : renderSequenceTask(task, taskIndex);
       return `<article class="flow-card" data-task-card="${taskIndex}">
         <div class="flow-card-head">
           <span class="flow-number">${taskIndex + 1}</span>
-          <select data-task-index="${taskIndex}" data-task-field="type">
-            <option value="every" ${type === "every" ? "selected" : ""}>循环动作</option>
-            <option value="sequence" ${type === "sequence" ? "selected" : ""}>序列流程</option>
-          </select>
+          <strong class="flow-card-title">${escapeHtml(t("flow.independent"))}</strong>
         </div>
-        <button class="delete-button flow-remove-button" data-remove-task="${taskIndex}" type="button" aria-label="删除流程">×</button>
-        ${body}
+        <button class="delete-button flow-remove-button" data-remove-task="${taskIndex}" type="button" aria-label="${escapeHtml(t("flow.delete"))}">×</button>
+        ${renderIndependentFlowTask(task, taskIndex)}
       </article>`;
     })
     .join("");
 }
 
-function renderEveryTask(task, taskIndex) {
-  const arrowId = `loop-arrow-${taskIndex}`;
-  const action = firstActionStep(task);
-  return `<div class="loop-flow">
-    <label class="flow-node process editable">
-      <span>动作</span>
-      <select data-task-index="${taskIndex}" data-every-mode>
-        <option value="tap" ${stepMode(action) === "tap" ? "selected" : ""}>短按</option>
-        <option value="hold" ${stepMode(action) === "hold" ? "selected" : ""}>长按</option>
-      </select>
-      <input data-task-index="${taskIndex}" data-every-value type="text" value="${escapeHtml(stepValue(action))}" autocomplete="off" />
-      ${stepMode(action) === "hold" ? `<input data-task-index="${taskIndex}" data-every-hold type="number" min="0.001" step="0.001" value="${formatNumber(stepHoldSeconds(action))}" title="长按秒数" />` : ""}
-    </label>
-    <div class="flow-arrow loop-forward">→</div>
-    <label class="flow-node delay editable">
-      <span>等待(s)</span>
-      <input data-task-index="${taskIndex}" data-task-field="interval" type="number" min="0.001" step="0.001" value="${formatNumber(task.interval)}" />
-    </label>
-    <svg class="loop-return" viewBox="0 0 560 150" aria-hidden="true" focusable="false">
-      <defs>
-        <marker id="${arrowId}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" markerUnits="userSpaceOnUse" orient="auto">
-          <path class="loop-return-head" d="M 0 0 L 10 5 L 0 10 z" />
-        </marker>
-      </defs>
-      <path class="loop-return-line" marker-end="url(#${arrowId})" d="M 552 66 C 572 66 572 132 520 132 L 120 132 L 120 96" />
-    </svg>
-  </div>`;
-}
-
-function renderSequenceTask(task, taskIndex) {
+function renderIndependentFlowTask(task, taskIndex) {
   const steps = task.steps
     .map((step, stepIndex) => renderStepNode(step, taskIndex, stepIndex))
     .join(`<div class="flow-arrow vertical">↓</div>`);
-  return `<div class="flow-sequence">
-    ${steps}
-    <div class="step-actions">
-      <button class="ghost-button compact-button" data-add-step="action" data-task-index="${taskIndex}" type="button">添加动作</button>
-      <button class="ghost-button compact-button" data-add-step="wait" data-task-index="${taskIndex}" type="button">添加等待</button>
+  return `<div class="independent-flow">
+    <label class="flow-node delay editable flow-period-node">
+      <span>${escapeHtml(t("flow.periodSeconds"))}</span>
+      <input data-task-index="${taskIndex}" data-task-field="interval" type="number" min="0.001" step="0.001" value="${formatNumber(task.interval)}" />
+    </label>
+    <div class="flow-sequence">
+      ${steps}
+      <div class="step-actions">
+        <button class="ghost-button compact-button" data-add-step="action" data-task-index="${taskIndex}" type="button">${escapeHtml(t("flow.addAction"))}</button>
+        <button class="ghost-button compact-button" data-add-step="wait" data-task-index="${taskIndex}" type="button">${escapeHtml(t("flow.addWait"))}</button>
+      </div>
     </div>
   </div>`;
 }
@@ -507,25 +793,25 @@ function renderStepNode(step, taskIndex, stepIndex) {
   if (isWait) {
     return `<div class="flow-node step-node wait-step">
       <select data-task-index="${taskIndex}" data-step-index="${stepIndex}" data-step-field="kind">
-        <option value="tap">短按</option>
-        <option value="hold">长按</option>
-        <option value="wait" selected>等待</option>
+        <option value="tap">${escapeHtml(t("flow.tap"))}</option>
+        <option value="hold">${escapeHtml(t("flow.hold"))}</option>
+        <option value="wait" selected>${escapeHtml(t("flow.wait"))}</option>
       </select>
       <input data-task-index="${taskIndex}" data-step-index="${stepIndex}" data-step-field="value"
         type="number" min="0.001" step="0.001" value="${escapeHtml(formatNumber(step.seconds || 0.2))}" />
-      <button class="delete-button" data-remove-step="${stepIndex}" data-task-index="${taskIndex}" type="button" aria-label="删除步骤">×</button>
+      <button class="delete-button" data-remove-step="${stepIndex}" data-task-index="${taskIndex}" type="button" aria-label="${escapeHtml(t("flow.deleteStep"))}">×</button>
     </div>`;
   }
 
   return `<div class="flow-node step-node">
     <select data-task-index="${taskIndex}" data-step-index="${stepIndex}" data-step-field="kind">
-      <option value="tap" ${stepMode(step) === "tap" ? "selected" : ""}>短按</option>
-      <option value="hold" ${stepMode(step) === "hold" ? "selected" : ""}>长按</option>
-      <option value="wait">等待</option>
+      <option value="tap" ${stepMode(step) === "tap" ? "selected" : ""}>${escapeHtml(t("flow.tap"))}</option>
+      <option value="hold" ${stepMode(step) === "hold" ? "selected" : ""}>${escapeHtml(t("flow.hold"))}</option>
+      <option value="wait">${escapeHtml(t("flow.wait"))}</option>
     </select>
     <input data-task-index="${taskIndex}" data-step-index="${stepIndex}" data-step-field="value" type="text" value="${escapeHtml(stepValue(step))}" autocomplete="off" />
-    ${stepMode(step) === "hold" ? `<input data-task-index="${taskIndex}" data-step-index="${stepIndex}" data-step-field="hold" type="number" min="0.001" step="0.001" value="${escapeHtml(formatNumber(stepHoldSeconds(step)))}" title="长按秒数" />` : `<span class="step-spacer" aria-hidden="true"></span>`}
-    <button class="delete-button" data-remove-step="${stepIndex}" data-task-index="${taskIndex}" type="button" aria-label="删除步骤">×</button>
+    ${stepMode(step) === "hold" ? `<input data-task-index="${taskIndex}" data-step-index="${stepIndex}" data-step-field="hold" type="number" min="0.001" step="0.001" value="${escapeHtml(formatNumber(stepHoldSeconds(step)))}" title="${escapeHtml(t("flow.holdSeconds"))}" />` : `<span class="step-spacer" aria-hidden="true"></span>`}
+    <button class="delete-button" data-remove-step="${stepIndex}" data-task-index="${taskIndex}" type="button" aria-label="${escapeHtml(t("flow.deleteStep"))}">×</button>
   </div>`;
 }
 
@@ -573,13 +859,9 @@ function removeTrigger(index) {
   syncScriptFromVisual();
 }
 
-function addTask(type) {
+function addTask() {
   const macro = currentMacro();
-  macro.tasks.push(
-    type === "sequence"
-      ? { type: "sequence", interval: 3, steps: [{ kind: "press", key: "r" }, { kind: "wait", seconds: 0.2 }, { kind: "press", key: "a" }] }
-      : { type: "every", interval: 1, steps: [{ kind: "press", key: "space" }] },
-  );
+  macro.tasks.push({ type: "every", interval: 1, steps: [{ kind: "press", key: "space" }] });
   renderFlowTasks();
   syncScriptFromVisual();
 }
@@ -600,41 +882,6 @@ function handleFlowInput(event) {
 
   if (target.dataset.taskField === "interval") {
     task.interval = positiveNumber(target.value, 1);
-    syncScriptFromVisual();
-    return;
-  }
-
-  if (target.dataset.taskField === "type") {
-    task.type = target.value;
-    if (task.type === "every") {
-      task.steps = [firstActionStep(task)];
-    } else if (task.steps.length === 1) {
-      task.steps.push({ kind: "wait", seconds: 0.2 }, { kind: "press", key: "a" });
-    }
-    renderFlowTasks();
-    syncScriptFromVisual();
-    return;
-  }
-
-  if (target.hasAttribute("data-every-mode")) {
-    const action = firstActionStep(task);
-    const mode = target.hasAttribute("data-every-mode") ? target.value : stepMode(action);
-    task.steps = [makeActionStep(mode, stepValue(action), stepHoldSeconds(action))];
-    renderFlowTasks();
-    syncScriptFromVisual();
-    return;
-  }
-
-  if (target.hasAttribute("data-every-value")) {
-    const action = firstActionStep(task);
-    task.steps = [makeActionStep(stepMode(action), target.value, stepHoldSeconds(action))];
-    syncScriptFromVisual();
-    return;
-  }
-
-  if (target.hasAttribute("data-every-hold")) {
-    const action = firstActionStep(task);
-    task.steps = [makeActionStep("hold", stepValue(action), positiveNumber(target.value, 0.2))];
     syncScriptFromVisual();
     return;
   }
@@ -691,7 +938,6 @@ function handleFlowClick(event) {
   const addStepButton = event.target.closest("[data-add-step]");
   if (addStepButton) {
     const task = macro.tasks[Number(addStepButton.dataset.taskIndex)];
-    task.type = "sequence";
     task.steps.push(
       addStepButton.dataset.addStep === "wait"
         ? { kind: "wait", seconds: 0.2 }
@@ -829,7 +1075,7 @@ function clearMacroDropState() {
 
 function isActionTargetInput(element) {
   if (!(element instanceof HTMLInputElement) || element.type !== "text") return false;
-  return element.hasAttribute("data-every-value") || element.dataset.stepField === "value";
+  return element.dataset.stepField === "value";
 }
 
 function showTargetSuggestions(input) {
@@ -842,7 +1088,11 @@ function showTargetSuggestions(input) {
 
 function filterTargetSuggestions(query) {
   const normalized = String(query || "").trim().toLowerCase();
-  const options = ACTION_TARGET_OPTIONS.map(([value, label, detail]) => ({ value, label, detail }));
+  const options = ACTION_TARGET_OPTIONS.map(([value, label, detail]) => ({
+    value,
+    label: localized(label),
+    detail: localized(detail),
+  }));
   if (!normalized) return options.slice(0, 14);
 
   return options
@@ -942,7 +1192,7 @@ function syncScriptFromVisual() {
   renderCounts();
   validateDraft({ syncVisual: false });
   scheduleSave({ syncVisual: false });
-  setVisualStatus("neutral", "已同步，等待保存");
+  setVisualStatus("neutral", t("save.synced"));
 }
 
 function visualModelToScript(model) {
@@ -1009,7 +1259,7 @@ function markVisualEditing() {
 function scheduleSave(options = {}) {
   clearTimeout(state.saveTimer);
   state.pendingSaveOptions = options;
-  setSaveStatus("neutral", "等待保存");
+  setSaveStatus("neutral", t("save.waiting"));
   state.saveTimer = setTimeout(() => {
     saveConfig(state.pendingSaveOptions);
   }, 450);
@@ -1021,24 +1271,24 @@ async function saveConfig(options = {}) {
   const reloadActive = options.reloadActive ?? true;
   clearTimeout(state.saveTimer);
   try {
-    setSaveStatus("neutral", "正在校验…");
-    setVisualStatus("neutral", "正在校验…");
+    setSaveStatus("neutral", t("save.checking"));
+    setVisualStatus("neutral", t("save.checking"));
     const payload = await invoke("save_config", { content: editor.value });
     state.currentPath = payload.path;
     configPath.textContent = payload.path;
     renderValidation(payload.validation, { syncVisual });
     const now = new Date().toLocaleTimeString();
-    setSaveStatus("success", `已保存 ${now}`);
-    setVisualStatus("success", `语法正确，已保存 ${now}`);
+    setSaveStatus("success", t("save.saved", { time: now }));
+    setVisualStatus("success", t("save.syntaxOk", { time: now }));
     if (reloadActive && isMacroRuntimeActive()) {
       await reloadActiveRuntime(now);
     }
     return payload;
   } catch (error) {
     const message = error.message || String(error);
-    setSaveStatus("danger", "语法错误，未保存");
-    setVisualStatus("danger", "语法错误，未保存");
-    validationBadge.textContent = "有错误";
+    setSaveStatus("danger", t("save.syntaxError"));
+    setVisualStatus("danger", t("save.syntaxError"));
+    validationBadge.textContent = t("validation.invalid");
     validationBadge.className = "pill danger";
     validationMessage.textContent = message;
     if (throwOnError) throw error;
@@ -1048,22 +1298,22 @@ async function saveConfig(options = {}) {
 
 async function reloadActiveRuntime(savedAt) {
   const token = ++state.reloadToken;
-  setSaveStatus("neutral", "已保存，正在重载运行器…");
-  setVisualStatus("neutral", "已保存，正在重载运行器…");
+  setSaveStatus("neutral", t("save.savedReloading"));
+  setVisualStatus("neutral", t("save.savedReloading"));
   try {
     const status = await invoke("reload_macro");
     if (token !== state.reloadToken) return;
     renderMacroStatus(status);
-    setSaveStatus("success", `已保存并重载 ${savedAt}`);
-    setVisualStatus("success", `语法正确，已重载 ${savedAt}`);
+    setSaveStatus("success", t("save.savedReloaded", { time: savedAt }));
+    setVisualStatus("success", t("save.syntaxReloaded", { time: savedAt }));
   } catch (error) {
     if (token !== state.reloadToken) return;
     const message = error.message || String(error);
-    setSaveStatus("danger", "已保存，重载失败");
-    setVisualStatus("danger", "已保存，重载失败");
-    macroStateBadge.textContent = "重载失败";
+    setSaveStatus("danger", t("save.reloadFailed"));
+    setVisualStatus("danger", t("save.reloadFailed"));
+    macroStateBadge.textContent = t("status.reloadFailed");
     macroStateBadge.className = "pill danger";
-    macroStateText.textContent = `当前仍在使用旧运行配置：${message}`;
+    macroStateText.textContent = t("runtime.oldConfig", { message });
   }
 }
 
@@ -1085,7 +1335,7 @@ async function validateDraft(options = {}) {
 
 async function loadConfig() {
   try {
-    apiState.textContent = "后端已连接";
+    apiState.textContent = t("api.connected");
     apiState.classList.remove("danger");
     apiState.classList.add("success");
     const payload = await invoke("load_config");
@@ -1094,14 +1344,14 @@ async function loadConfig() {
     editor.value = payload.content;
     renderCounts();
     renderValidation(payload.validation);
-    setSaveStatus("success", "已加载");
-    setVisualStatus(payload.validation.ok ? "success" : "danger", payload.validation.ok ? "已加载" : "配置有语法错误");
+    setSaveStatus("success", t("load.loaded"));
+    setVisualStatus(payload.validation.ok ? "success" : "danger", payload.validation.ok ? t("load.loaded") : t("load.syntaxError"));
   } catch (error) {
-    apiState.textContent = "后端未连接";
+    apiState.textContent = t("api.disconnected");
     apiState.classList.remove("success");
     apiState.classList.add("danger");
-    setSaveStatus("danger", "加载失败");
-    setVisualStatus("danger", "加载失败");
+    setSaveStatus("danger", t("load.failed"));
+    setVisualStatus("danger", t("load.failed"));
     validationMessage.textContent = error.message || String(error);
   }
 }
@@ -1110,7 +1360,7 @@ async function refreshMacroStatus() {
   try {
     renderMacroStatus(await invoke("macro_status"));
   } catch (error) {
-    macroStateBadge.textContent = "错误";
+    macroStateBadge.textContent = t("status.error");
     macroStateBadge.className = "pill danger";
     macroStateText.textContent = error.message || String(error);
   }
@@ -1122,7 +1372,7 @@ async function refreshBackendHealth() {
     renderBackendHealth(health);
     return health;
   } catch (error) {
-    backendBadge.textContent = "错误";
+    backendBadge.textContent = t("backend.error");
     backendBadge.className = "pill danger";
     backendMessage.textContent = error.message || String(error);
     return null;
@@ -1137,7 +1387,7 @@ async function runMacroCommand(command) {
     const status = await invoke(command);
     renderMacroStatus(status);
   } catch (error) {
-    macroStateBadge.textContent = "错误";
+    macroStateBadge.textContent = t("status.error");
     macroStateBadge.className = "pill danger";
     macroStateText.textContent = error.message || String(error);
   }
@@ -1165,22 +1415,22 @@ function switchTab(target) {
 
 async function installYdotool() {
   installYdotoolButton.disabled = true;
-  installYdotoolButton.textContent = "安装中…";
+  installYdotoolButton.textContent = t("install.installingButton");
   let health = null;
   try {
-    backendBadge.textContent = "安装中";
+    backendBadge.textContent = t("backend.installing");
     backendBadge.className = "pill";
-    backendMessage.textContent = "正在请求管理员授权安装 ydotool，请确认系统弹窗。";
+    backendMessage.textContent = t("backend.installAuth");
     await nextFrame();
     const message = await invoke("install_ydotool");
     backendMessage.textContent = message;
     health = await refreshBackendHealth();
   } catch (error) {
-    backendBadge.textContent = "安装失败";
+    backendBadge.textContent = t("backend.installFailed");
     backendBadge.className = "pill danger";
     backendMessage.textContent = error.message || String(error);
   } finally {
-    installYdotoolButton.textContent = "安装/启动 ydotool";
+    installYdotoolButton.textContent = t("backend.install");
     installYdotoolButton.disabled = Boolean(health?.ydotool_installed && health?.systemctl_installed);
   }
 }
@@ -1439,11 +1689,13 @@ window.addEventListener("resize", hideTargetSuggestions);
 document.addEventListener("scroll", handleDocumentScroll, true);
 
 addMacroButton.addEventListener("click", addMacro);
-addEveryTaskButton.addEventListener("click", () => addTask("every"));
-addSequenceTaskButton.addEventListener("click", () => addTask("sequence"));
+addFlowTaskButton.addEventListener("click", addTask);
 saveNowButton.addEventListener("click", () => saveConfig());
 powerToggleButton.addEventListener("click", togglePower);
 installYdotoolButton.addEventListener("click", installYdotool);
+languageToggle.addEventListener("click", () => {
+  setLanguage(state.language === "en" ? "zh" : "en", { validate: true });
+});
 
 themeToggle.addEventListener("click", () => {
   setTheme(document.documentElement.dataset.theme === "mocha" ? "latte" : "mocha");
@@ -1468,6 +1720,7 @@ document.addEventListener("keydown", (event) => {
   }
 });
 
+setLanguage(state.language, { validate: false });
 setTheme(localStorage.getItem("linuxmacro-theme") || "mocha");
 renderCounts();
 renderVisualEditor();

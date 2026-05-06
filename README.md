@@ -27,12 +27,13 @@ copies it to the new path on first launch. The old file is not deleted.
 
 - Desktop app and macro runner are the same Tauri application.
 - Graphical macro editor for multiple independent macros, each with its own
-  enable checkbox, drag-and-drop trigger assignment, and loop/sequence flows.
+  enable checkbox, drag-and-drop trigger assignment, and independent flows.
 - Advanced script editor for direct `.macro` edits.
 - Live syntax validation before saving.
 - Debounced real-time writes to `~/.config/linuxmacro/config.macro`.
 - Large center start/stop toggle button for the runtime.
 - Catppuccin Mocha and Catppuccin Latte themes.
+- English and Chinese interface switching. English is the default.
 - Direct Rust backend detection for `ydotool` and `xdotool`.
 - Optional in-app `ydotool` install/start helper with explicit authorization.
 
