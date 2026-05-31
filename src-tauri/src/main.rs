@@ -215,7 +215,7 @@ fn status_from_runner(runner: Option<&ProgramHandle>) -> MacroStatus {
             enabled_macro_count: enabled_macros.len(),
             task_count: enabled_macros
                 .iter()
-                .map(|macro_spec| macro_spec.tasks.len())
+                .map(|macro_spec| macro_spec.holds.len() + macro_spec.tasks.len())
                 .sum(),
         }
     } else {

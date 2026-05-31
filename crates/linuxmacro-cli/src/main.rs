@@ -83,12 +83,25 @@ fn check_default_config() -> CliResult<()> {
             },
             macro_spec.trigger_buttons.join(", ")
         );
-        println!("    Tasks: {}", macro_spec.tasks.len());
+        println!(
+            "    Flows: {}",
+            macro_spec.holds.len() + macro_spec.tasks.len()
+        );
+        for hold in &macro_spec.holds {
+            println!("      - {}", describe_hold(hold));
+        }
         for task in &macro_spec.tasks {
             println!("      - {}", task.description);
         }
     }
     Ok(())
+}
+
+fn describe_hold(hold: &parser::MacroHoldSpec) -> String {
+    match hold {
+        parser::MacroHoldSpec::HoldKey { key } => format!("hold press {key}"),
+        parser::MacroHoldSpec::HoldClick { button } => format!("hold click {button}"),
+    }
 }
 
 fn print_config_path() -> CliResult<()> {

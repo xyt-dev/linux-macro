@@ -36,6 +36,8 @@ pub struct MacroSpec {
     pub trigger_buttons: Vec<String>,
     pub grab_toggle_device: bool,
     pub start_running: bool,
+    #[serde(default)]
+    pub holds: Vec<MacroHoldSpec>,
     pub tasks: Vec<MacroTaskSpec>,
 }
 
@@ -46,13 +48,18 @@ pub struct MacroTaskSpec {
     pub description: String,
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "kind", rename_all = "kebab-case")]
+pub enum MacroHoldSpec {
+    HoldKey { key: String },
+    HoldClick { button: String },
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(tag = "kind", rename_all = "kebab-case")]
 pub enum MacroStep {
     Press { key: String },
     Click { button: String },
-    HoldKey { key: String, seconds: f64 },
-    HoldClick { button: String, seconds: f64 },
     Wait { seconds: f64 },
 }
 
@@ -92,7 +99,7 @@ pub fn validate_content(content: &str) -> ValidationReport {
             task_count: program
                 .macros
                 .iter()
-                .map(|macro_spec| macro_spec.tasks.len())
+                .map(|macro_spec| macro_spec.holds.len() + macro_spec.tasks.len())
                 .sum(),
             line_count: content.lines().count(),
             program: Some(program),
@@ -211,6 +218,7 @@ fn parse_legacy_program(
     ];
     let mut grab_toggle_device = false;
     let mut start_running = false;
+    let mut holds: Vec<MacroHoldSpec> = Vec::new();
     let mut tasks: Vec<MacroTaskSpec> = Vec::new();
 
     let raw_lines: Vec<&str> = content.lines().collect();
@@ -269,6 +277,10 @@ fn parse_legacy_program(
                 tasks.push(parse_every_line(&parts)?);
                 Ok(())
             }
+            "hold" => {
+                holds.push(parse_hold_line(&parts)?);
+                Ok(())
+            }
             "sequence" => {
                 let (task, next_index) =
                     parse_sequence(&raw_lines, line_index, &parts, line_number)?;
@@ -286,16 +298,17 @@ fn parse_legacy_program(
         }
     }
 
-    if tasks.is_empty() {
+    if tasks.is_empty() && holds.is_empty() {
         return Err(MacroParseError::new(format!(
-            "{display_name}: no macro tasks found"
+            "{display_name}: no macro tasks or holds found"
         )));
     }
 
     if description.is_empty() {
-        description = tasks
+        description = holds
             .iter()
-            .map(|task| task.description.as_str())
+            .map(describe_hold)
+            .chain(tasks.iter().map(|task| task.description.clone()))
             .collect::<Vec<_>>()
             .join("; ");
     }
@@ -307,6 +320,7 @@ fn parse_legacy_program(
         trigger_buttons,
         grab_toggle_device,
         start_running,
+        holds,
         tasks,
     };
     let program = MacroProgram {
@@ -368,6 +382,7 @@ fn parse_macro_block(
     let mut trigger_buttons = Vec::new();
     let mut grab_toggle_device = false;
     let mut start_running = false;
+    let mut holds: Vec<MacroHoldSpec> = Vec::new();
     let mut tasks: Vec<MacroTaskSpec> = Vec::new();
 
     while line_index < raw_lines.len() {
@@ -378,9 +393,9 @@ fn parse_macro_block(
             continue;
         }
         if line == "}" {
-            if tasks.is_empty() {
+            if tasks.is_empty() && holds.is_empty() {
                 return Err(MacroParseError::new(format!(
-                    "{display_name}:{macro_line_number}: macro {name:?} has no tasks"
+                    "{display_name}:{macro_line_number}: macro {name:?} has no tasks or holds"
                 )));
             }
             if trigger_buttons.is_empty() {
@@ -389,9 +404,10 @@ fn parse_macro_block(
                 )));
             }
             if description.is_empty() {
-                description = tasks
+                description = holds
                     .iter()
-                    .map(|task| task.description.as_str())
+                    .map(describe_hold)
+                    .chain(tasks.iter().map(|task| task.description.clone()))
                     .collect::<Vec<_>>()
                     .join("; ");
             }
@@ -404,6 +420,7 @@ fn parse_macro_block(
                     trigger_buttons,
                     grab_toggle_device,
                     start_running,
+                    holds,
                     tasks,
                 },
                 line_index,
@@ -442,6 +459,10 @@ fn parse_macro_block(
                 tasks.push(parse_every_line(&parts)?);
                 Ok(())
             }
+            "hold" => {
+                holds.push(parse_hold_line(&parts)?);
+                Ok(())
+            }
             "sequence" => {
                 let (task, next_index) =
                     parse_sequence(raw_lines, line_index, &parts, line_number)?;
@@ -475,10 +496,11 @@ fn validate_program(program: &MacroProgram, display_name: &str) -> Result<(), Ma
     }
 
     let mut used_triggers = std::collections::HashMap::<&str, &str>::new();
+    let mut used_holds = std::collections::HashMap::<String, &str>::new();
     for macro_spec in &program.macros {
-        if macro_spec.tasks.is_empty() {
+        if macro_spec.tasks.is_empty() && macro_spec.holds.is_empty() {
             return Err(MacroParseError::new(format!(
-                "{display_name}: macro {:?} has no tasks",
+                "{display_name}: macro {:?} has no tasks or holds",
                 macro_spec.name
             )));
         }
@@ -504,9 +526,28 @@ fn validate_program(program: &MacroProgram, display_name: &str) -> Result<(), Ma
                 )));
             }
         }
+
+        for hold in &macro_spec.holds {
+            let identity = hold_identity(hold);
+            if let Some(previous_name) =
+                used_holds.insert(identity.clone(), macro_spec.name.as_str())
+            {
+                return Err(MacroParseError::new(format!(
+                    "{display_name}: held input {identity:?} is used by enabled macros {previous_name:?} and {:?}",
+                    macro_spec.name
+                )));
+            }
+        }
     }
 
     Ok(())
+}
+
+fn hold_identity(hold: &MacroHoldSpec) -> String {
+    match hold {
+        MacroHoldSpec::HoldKey { key } => format!("key:{key}"),
+        MacroHoldSpec::HoldClick { button } => format!("mouse:{button}"),
+    }
 }
 
 fn parse_bool(value: &str, name: &str) -> Result<bool, MacroParseError> {
@@ -648,24 +689,9 @@ pub fn normalize_evdev_trigger(value: &str) -> String {
 }
 
 fn parse_every_line(parts: &[&str]) -> Result<MacroTaskSpec, MacroParseError> {
-    if parts.len() == 6 && parts[2].eq_ignore_ascii_case("hold") {
-        let interval = parse_duration(parts[1])?;
-        let hold_seconds = parse_duration(parts[3])?;
-        let step = parse_hold_step(parts[4], parts[5], hold_seconds)?;
-        return Ok(MacroTaskSpec {
-            interval,
-            steps: vec![step.clone()],
-            description: format!(
-                "{} every {}s",
-                describe_step(&step),
-                format_seconds(interval)
-            ),
-        });
-    }
-
     if parts.len() != 4 {
         return Err(MacroParseError::new(
-            "use: every <duration> press <key>, every <duration> click <button>, or every <duration> hold <duration> press|click <target>",
+            "use: every <duration> press <key> or every <duration> click <button>; use hold press|click <target> for toggle holds",
         ));
     }
     let interval = parse_duration(parts[1])?;
@@ -687,21 +713,25 @@ fn parse_every_line(parts: &[&str]) -> Result<MacroTaskSpec, MacroParseError> {
         })
     } else {
         Err(MacroParseError::new(
-            "use: every <duration> press <key>, every <duration> click <button>, or every <duration> hold <duration> press|click <target>",
+            "use: every <duration> press <key> or every <duration> click <button>; use hold press|click <target> for toggle holds",
         ))
     }
 }
 
-fn parse_hold_step(action: &str, target: &str, seconds: f64) -> Result<MacroStep, MacroParseError> {
-    if action.eq_ignore_ascii_case("press") {
-        Ok(MacroStep::HoldKey {
-            key: parse_key(target)?,
-            seconds,
+fn parse_hold_line(parts: &[&str]) -> Result<MacroHoldSpec, MacroParseError> {
+    if parts.len() != 3 {
+        return Err(MacroParseError::new(
+            "use: hold press <key> or hold click <button>; hold is a toggle and does not take a period or duration",
+        ));
+    }
+
+    if parts[1].eq_ignore_ascii_case("press") {
+        Ok(MacroHoldSpec::HoldKey {
+            key: parse_key(parts[2])?,
         })
-    } else if action.eq_ignore_ascii_case("click") {
-        Ok(MacroStep::HoldClick {
-            button: parse_mouse_button(target)?,
-            seconds,
+    } else if parts[1].eq_ignore_ascii_case("click") {
+        Ok(MacroHoldSpec::HoldClick {
+            button: parse_mouse_button(parts[2])?,
         })
     } else {
         Err(MacroParseError::new(
@@ -766,14 +796,9 @@ fn parse_sequence(
                     MacroParseError::new(format!("line {current_number}: {error}"))
                 })?,
             }
-        } else if step_parts.len() == 4 && step_parts[0].eq_ignore_ascii_case("hold") {
-            let seconds = parse_duration(step_parts[1])
-                .map_err(|error| MacroParseError::new(format!("line {current_number}: {error}")))?;
-            parse_hold_step(step_parts[2], step_parts[3], seconds)
-                .map_err(|error| MacroParseError::new(format!("line {current_number}: {error}")))?
         } else {
             return Err(MacroParseError::new(
-                "sequence lines must be: press <key>, click <button>, hold <duration> press|click <target>, or wait <duration>",
+                "sequence lines must be: press <key>, click <button>, or wait <duration>; put toggle holds at macro level with hold press|click <target>",
             ));
         };
         steps.push(step);
@@ -789,16 +814,17 @@ fn describe_sequence(interval: f64, steps: &[MacroStep]) -> String {
     format!("every {}s: {}", format_seconds(interval), pieces.join(", "))
 }
 
+fn describe_hold(hold: &MacroHoldSpec) -> String {
+    match hold {
+        MacroHoldSpec::HoldKey { key } => format!("hold press {key}"),
+        MacroHoldSpec::HoldClick { button } => format!("hold click {button}"),
+    }
+}
+
 fn describe_step(step: &MacroStep) -> String {
     match step {
         MacroStep::Press { key } => format!("press {key}"),
         MacroStep::Click { button } => format!("click {button}"),
-        MacroStep::HoldKey { key, seconds } => {
-            format!("hold press {key} for {}s", format_seconds(*seconds))
-        }
-        MacroStep::HoldClick { button, seconds } => {
-            format!("hold click {button} for {}s", format_seconds(*seconds))
-        }
         MacroStep::Wait { seconds } => format!("wait {}s", format_seconds(*seconds)),
     }
 }
@@ -824,14 +850,14 @@ backend auto
 macro "Demo" {
   trigger side browserforward f1
   start running
+  hold press f1
+  hold click left
   every 1s press r
   every 50ms click left
-  every 2s hold 250ms press f1
   sequence 500ms {
     press a
     wait 100ms
     click right
-    hold 150ms click left
     press b
   }
 }
@@ -854,21 +880,25 @@ macro "Disabled" {
             vec!["BTN_SIDE", "KEY_FORWARD", "KEY_F1"]
         );
         assert!(program.macros[0].start_running);
-        assert_eq!(program.macros[0].tasks.len(), 4);
+        assert_eq!(
+            program.macros[0].holds,
+            vec![
+                MacroHoldSpec::HoldKey {
+                    key: "f1".to_string()
+                },
+                MacroHoldSpec::HoldClick {
+                    button: "left".to_string()
+                }
+            ]
+        );
+        assert_eq!(program.macros[0].tasks.len(), 3);
         assert_eq!(
             program.macros[0].tasks[1].steps,
             vec![MacroStep::Click {
                 button: "left".to_string()
             }]
         );
-        assert_eq!(
-            program.macros[0].tasks[2].steps,
-            vec![MacroStep::HoldKey {
-                key: "f1".to_string(),
-                seconds: 0.25
-            }]
-        );
-        assert_eq!(program.macros[0].tasks[3].steps.len(), 5);
+        assert_eq!(program.macros[0].tasks[2].steps.len(), 4);
         assert!(!program.macros[1].enabled);
     }
 
@@ -880,6 +910,7 @@ name Demo
 backend auto
 toggle side extra browserforward
 start running
+hold press space
 every 50ms click left
 "#,
         )
@@ -892,7 +923,69 @@ every 50ms click left
             program.macros[0].trigger_buttons,
             vec!["BTN_SIDE", "BTN_EXTRA", "KEY_FORWARD"]
         );
+        assert_eq!(
+            program.macros[0].holds,
+            vec![MacroHoldSpec::HoldKey {
+                key: "space".to_string()
+            }]
+        );
         assert_eq!(program.macros[0].tasks.len(), 1);
+    }
+
+    #[test]
+    fn parses_hold_only_macro() {
+        let program = parse_macro_str(
+            r#"
+macro "Hold Space" {
+  trigger side
+  hold press space
+}
+"#,
+        )
+        .unwrap();
+
+        assert!(program.macros[0].tasks.is_empty());
+        assert_eq!(
+            program.macros[0].holds,
+            vec![MacroHoldSpec::HoldKey {
+                key: "space".to_string()
+            }]
+        );
+    }
+
+    #[test]
+    fn rejects_old_timed_hold_syntax() {
+        let error = parse_macro_str(
+            r#"
+macro "Old" {
+  trigger side
+  every 1s hold 200ms press a
+}
+"#,
+        )
+        .unwrap_err();
+
+        assert!(error.to_string().contains("use: every <duration> press"));
+    }
+
+    #[test]
+    fn rejects_duplicate_enabled_holds() {
+        let error = parse_macro_str(
+            r#"
+macro "A" {
+  trigger side
+  hold press space
+}
+
+macro "B" {
+  trigger extra
+  hold press space
+}
+"#,
+        )
+        .unwrap_err();
+
+        assert!(error.to_string().contains("held input \"key:space\""));
     }
 
     #[test]
@@ -930,6 +1023,6 @@ macro "B" {
     #[test]
     fn rejects_empty_program() {
         let error = parse_macro_str("name Empty").unwrap_err();
-        assert!(error.to_string().contains("no macro tasks"));
+        assert!(error.to_string().contains("no macro tasks or holds"));
     }
 }

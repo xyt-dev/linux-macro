@@ -102,7 +102,12 @@ linux-macro
 ```
 
 This installs the Tauri desktop app as `linux-macro` under `~/.cargo/bin`.
-Make sure `~/.cargo/bin` is in `PATH`.
+Make sure `~/.cargo/bin` is in `PATH`. To update an existing local install, add
+`--force`:
+
+```bash
+cargo install --path src-tauri --force
+```
 
 For a Git install, use the same package and binary names:
 
@@ -118,12 +123,24 @@ cargo run -p linuxmacro-app
 
 ### 5. Optional CLI
 
+Run the CLI from the repository root without installing:
+
 ```bash
 cargo run -p linuxmacro -- init
 cargo run -p linuxmacro -- check
 cargo run -p linuxmacro -- run
 cargo run -p linuxmacro -- list-inputs
 ```
+
+Install or update the CLI as `linuxmacro` under `~/.cargo/bin`:
+
+```bash
+cargo install --path crates/linuxmacro-cli --force
+linuxmacro check
+linuxmacro run
+```
+
+Use `--force` when updating an existing local install.
 
 ## Input Backends
 
@@ -222,7 +239,6 @@ macro "Left clicker" {
   description Toggle left click every 50ms with the side button.
   enabled on
   trigger side
-  start paused
   every 50ms click left
 }
 
@@ -230,7 +246,6 @@ macro "R then A" {
   description Toggle a sequence with the extra button.
   enabled on
   trigger extra
-  start paused
 
   sequence 3s {
     press r
@@ -248,14 +263,13 @@ Supported statements:
 - Per macro: `description <text>`
 - Per macro: `enabled on|off`
 - Per macro: `trigger side|extra|browserback|browserforward|f1..f12|BTN_SIDE|BTN_EXTRA|KEY_F1`
-- Per macro: `start paused|running`
+- Per macro: `hold press <key>` to press and keep a key down while the macro is running
+- Per macro: `hold click left|right|middle|side|extra` to hold a mouse button while the macro is running
 - Per macro: `every <duration> press <key>`
 - Per macro: `every <duration> click left|right|middle|side|extra`
-- Per macro: `every <duration> hold <duration> press <key>`
-- Per macro: `every <duration> hold <duration> click left|right|middle|side|extra`
-- Per macro: `sequence <duration> { ... }` with `press <key>`, `click <button>`, `hold <duration> press|click <target>`, and `wait <duration>`
+- Per macro: `sequence <duration> { ... }` with `press <key>`, `click <button>`, and `wait <duration>`
 
-Durations can be `1`, `1s`, or `200ms`.
+`hold` is a toggle hold: the key/button is pressed when the macro starts running and released when the macro is paused or stopped. It does not take a period or hold duration. Durations for `every`, `sequence`, and `wait` can be `1`, `1s`, or `200ms`.
 
 In the graphical editor, actions do not require choosing keyboard versus mouse.
 Targets such as `left`, `right`, `middle`, `side`, and `extra` are treated as
@@ -264,11 +278,15 @@ force an ambiguous target, use `key:left` or `mouse:left`.
 
 Each enabled macro must use different trigger keys. The parser rejects configs
 where two enabled macros share the same trigger, because one physical button
-should not toggle two different macros accidentally. Disabled macros may keep
-their old triggers until you enable them. The graphical editor intentionally
-offers only safer trigger keys: side/extra mouse buttons, browser back/forward,
-and F1-F12. It does not offer letters, digits, space, or primary mouse clicks
-as enable keys.
+should not toggle two different macros accidentally. Enabled macros also cannot
+hold the same key or mouse button at the same time, which avoids one macro
+releasing an input that another macro still expects to keep held. Disabled macros
+may keep their old triggers or held inputs until you enable them. The graphical
+editor intentionally offers only safer trigger keys: side/extra mouse buttons,
+browser back/forward, and F1-F12. It does not offer letters, digits, space, or
+primary mouse clicks as enable keys.
+
+Macros start paused by default. Legacy configs that explicitly contain `start paused|running` are still accepted, but the graphical editor no longer shows or generates that setting.
 
 Legacy single-macro configs using top-level `name`, `toggle`, `every`, and
 `sequence` are still accepted and are converted by the graphical editor into a

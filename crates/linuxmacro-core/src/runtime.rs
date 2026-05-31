@@ -1,5 +1,5 @@
 use crate::{
-    MacroProgram, MacroSpec, MacroStep, MacroTaskSpec,
+    MacroHoldSpec, MacroProgram, MacroSpec, MacroStep, MacroTaskSpec,
     backend::{
         KeyBackend, MacroRuntimeError, MouseButtonBackend, RuntimeResult, choose_backend,
         create_backend, create_mouse_button_backend,
@@ -51,6 +51,24 @@ struct ScheduledTask {
     backends: HashMap<String, KeyBackend>,
     mouse_backends: HashMap<String, MouseButtonBackend>,
     next_time: Instant,
+}
+
+#[derive(Clone, Debug)]
+enum PreparedHold {
+    Key {
+        key: String,
+        backend: KeyBackend,
+    },
+    MouseButton {
+        button: String,
+        backend: MouseButtonBackend,
+    },
+}
+
+#[derive(Clone, Debug)]
+struct HeldInput {
+    input: PreparedHold,
+    active: bool,
 }
 
 impl RuntimeState {
@@ -142,12 +160,13 @@ pub fn spawn_program(mut program: MacroProgram) -> RuntimeResult<ProgramHandle> 
     let mut prepared = Vec::with_capacity(enabled_macros.len());
     for macro_spec in enabled_macros {
         let tasks = build_tasks(&backend_name, &macro_spec.tasks)?;
-        prepared.push((macro_spec.clone(), tasks));
+        let holds = build_holds(&backend_name, &macro_spec.holds)?;
+        prepared.push((macro_spec.clone(), tasks, holds));
     }
 
     let mut workers: Vec<MacroWorker> = Vec::with_capacity(prepared.len());
     let mut bindings = Vec::with_capacity(prepared.len());
-    for (index, (macro_spec, tasks)) in prepared.into_iter().enumerate() {
+    for (index, (macro_spec, tasks, holds)) in prepared.into_iter().enumerate() {
         let state = RuntimeState::new(macro_spec.start_running);
         bindings.push(input::ToggleBinding {
             macro_name: macro_spec.name.clone(),
@@ -158,7 +177,7 @@ pub fn spawn_program(mut program: MacroProgram) -> RuntimeResult<ProgramHandle> 
         let worker_state = state.clone();
         let worker_name = thread_name(&macro_spec, index);
         let worker = match thread::Builder::new().name(worker_name).spawn(move || {
-            if let Err(error) = run_program_schedule(tasks, &worker_state) {
+            if let Err(error) = run_program_schedule(tasks, holds, &worker_state) {
                 worker_state.stop(format!("runtime error: {error}"));
             }
         }) {
@@ -274,10 +293,7 @@ fn build_tasks(
             .iter()
             .filter_map(|step| match step {
                 MacroStep::Press { key } => Some(key.clone()),
-                MacroStep::HoldKey { key, .. } => Some(key.clone()),
-                MacroStep::Click { .. } | MacroStep::HoldClick { .. } | MacroStep::Wait { .. } => {
-                    None
-                }
+                MacroStep::Click { .. } | MacroStep::Wait { .. } => None,
             })
             .collect::<HashSet<_>>();
         let mouse_buttons = spec
@@ -285,10 +301,7 @@ fn build_tasks(
             .iter()
             .filter_map(|step| match step {
                 MacroStep::Click { button } => Some(button.clone()),
-                MacroStep::HoldClick { button, .. } => Some(button.clone()),
-                MacroStep::Wait { .. } | MacroStep::Press { .. } | MacroStep::HoldKey { .. } => {
-                    None
-                }
+                MacroStep::Wait { .. } | MacroStep::Press { .. } => None,
             })
             .collect::<HashSet<_>>();
 
@@ -315,14 +328,66 @@ fn build_tasks(
     Ok(tasks)
 }
 
-fn run_program_schedule(mut tasks: Vec<ScheduledTask>, state: &RuntimeState) -> RuntimeResult<()> {
-    if tasks.is_empty() {
-        return Err(MacroRuntimeError::new("no macro tasks to run"));
+fn build_holds(
+    backend_name: &str,
+    hold_specs: &[MacroHoldSpec],
+) -> RuntimeResult<Vec<PreparedHold>> {
+    let mut holds = Vec::with_capacity(hold_specs.len());
+    for hold in hold_specs {
+        match hold {
+            MacroHoldSpec::HoldKey { key } => holds.push(PreparedHold::Key {
+                key: key.clone(),
+                backend: create_backend(backend_name, key)?,
+            }),
+            MacroHoldSpec::HoldClick { button } => holds.push(PreparedHold::MouseButton {
+                button: button.clone(),
+                backend: create_mouse_button_backend(backend_name, button)?,
+            }),
+        }
+    }
+    Ok(holds)
+}
+
+fn run_program_schedule(
+    mut tasks: Vec<ScheduledTask>,
+    holds: Vec<PreparedHold>,
+    state: &RuntimeState,
+) -> RuntimeResult<()> {
+    let mut holds = holds
+        .into_iter()
+        .map(|input| HeldInput {
+            input,
+            active: false,
+        })
+        .collect::<Vec<_>>();
+
+    let result = run_program_schedule_loop(&mut tasks, &mut holds, state);
+    let release_result = release_holds(&mut holds);
+    match (result, release_result) {
+        (Ok(()), Ok(())) => Ok(()),
+        (Err(error), Ok(())) => Err(error),
+        (Ok(()), Err(release_error)) => Err(release_error),
+        (Err(error), Err(release_error)) => Err(MacroRuntimeError::new(format!(
+            "{error}; additionally failed to release held inputs during cleanup: {release_error}"
+        ))),
+    }
+}
+
+fn run_program_schedule_loop(
+    tasks: &mut [ScheduledTask],
+    holds: &mut [HeldInput],
+    state: &RuntimeState,
+) -> RuntimeResult<()> {
+    if tasks.is_empty() && holds.is_empty() {
+        return Err(MacroRuntimeError::new("no macro tasks or holds to run"));
     }
 
     let mut was_running = false;
     while !state.is_stopped() {
         if !state.is_running() {
+            if was_running {
+                release_holds(holds)?;
+            }
             was_running = false;
             thread::sleep(Duration::from_millis(50));
             continue;
@@ -330,13 +395,14 @@ fn run_program_schedule(mut tasks: Vec<ScheduledTask>, state: &RuntimeState) -> 
 
         let now = Instant::now();
         if !was_running {
-            for task in &mut tasks {
+            press_holds(holds)?;
+            for task in tasks.iter_mut() {
                 task.next_time = now;
             }
             was_running = true;
         }
 
-        for task in &mut tasks {
+        for task in tasks.iter_mut() {
             if now >= task.next_time {
                 run_task(task, state)?;
                 let after_run = Instant::now();
@@ -382,18 +448,6 @@ fn run_task(task: &ScheduledTask, state: &RuntimeState) -> RuntimeResult<()> {
                 })?;
                 backend.click_once()?;
             }
-            MacroStep::HoldKey { key, seconds } => {
-                let backend = task.backends.get(key).ok_or_else(|| {
-                    MacroRuntimeError::new(format!("missing backend for key {key:?}"))
-                })?;
-                hold_key(backend, seconds_to_duration(*seconds), state)?;
-            }
-            MacroStep::HoldClick { button, seconds } => {
-                let backend = task.mouse_backends.get(button).ok_or_else(|| {
-                    MacroRuntimeError::new(format!("missing backend for mouse button {button:?}"))
-                })?;
-                hold_mouse_button(backend, seconds_to_duration(*seconds), state)?;
-            }
             MacroStep::Wait { seconds } => {
                 if !interruptible_sleep(seconds_to_duration(*seconds), state) {
                     return Ok(());
@@ -405,30 +459,69 @@ fn run_task(task: &ScheduledTask, state: &RuntimeState) -> RuntimeResult<()> {
     Ok(())
 }
 
-fn hold_key(backend: &KeyBackend, duration: Duration, state: &RuntimeState) -> RuntimeResult<()> {
-    backend.key_down()?;
-    let completed = interruptible_sleep(duration, state);
-    let release_result = backend.key_up();
-    release_result?;
-    if !completed {
-        return Ok(());
+impl PreparedHold {
+    fn press(&self) -> RuntimeResult<()> {
+        match self {
+            Self::Key { backend, .. } => backend.key_down(),
+            Self::MouseButton { backend, .. } => backend.button_down(),
+        }
+    }
+
+    fn release(&self) -> RuntimeResult<()> {
+        match self {
+            Self::Key { backend, .. } => backend.key_up(),
+            Self::MouseButton { backend, .. } => backend.button_up(),
+        }
+    }
+
+    fn description(&self) -> String {
+        match self {
+            Self::Key { key, .. } => format!("key {key:?}"),
+            Self::MouseButton { button, .. } => format!("mouse button {button:?}"),
+        }
+    }
+}
+
+fn press_holds(holds: &mut [HeldInput]) -> RuntimeResult<()> {
+    for hold in holds {
+        if hold.active {
+            continue;
+        }
+        hold.input.press().map_err(|error| {
+            MacroRuntimeError::new(format!(
+                "failed to press held {}: {error}",
+                hold.input.description()
+            ))
+        })?;
+        hold.active = true;
     }
     Ok(())
 }
 
-fn hold_mouse_button(
-    backend: &MouseButtonBackend,
-    duration: Duration,
-    state: &RuntimeState,
-) -> RuntimeResult<()> {
-    backend.button_down()?;
-    let completed = interruptible_sleep(duration, state);
-    let release_result = backend.button_up();
-    release_result?;
-    if !completed {
-        return Ok(());
+fn release_holds(holds: &mut [HeldInput]) -> RuntimeResult<()> {
+    let mut errors = Vec::new();
+    for hold in holds {
+        if !hold.active {
+            continue;
+        }
+        match hold.input.release() {
+            Ok(()) => {
+                hold.active = false;
+            }
+            Err(error) => {
+                errors.push(format!(
+                    "failed to release held {}: {error}",
+                    hold.input.description()
+                ));
+            }
+        }
     }
-    Ok(())
+
+    if errors.is_empty() {
+        Ok(())
+    } else {
+        Err(MacroRuntimeError::new(errors.join("; ")))
+    }
 }
 
 fn interruptible_sleep(duration: Duration, state: &RuntimeState) -> bool {

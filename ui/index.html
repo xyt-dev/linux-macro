@@ -120,24 +120,14 @@
                 <textarea id="visualDescription" rows="3" placeholder="Macro description" data-i18n-placeholder="field.descriptionPlaceholder"></textarea>
               </label>
 
-              <div class="field-grid">
-                <label class="field">
-                  <span data-i18n="field.backend">Global Backend</span>
-                  <select id="visualBackend">
-                    <option value="auto">auto</option>
-                    <option value="ydotool">ydotool</option>
-                    <option value="xdotool">xdotool</option>
-                  </select>
-                </label>
-
-                <label class="field">
-                  <span data-i18n="field.startState">Start State</span>
-                  <select id="visualStart">
-                    <option value="paused">paused</option>
-                    <option value="running">running</option>
-                  </select>
-                </label>
-              </div>
+              <label class="field">
+                <span data-i18n="field.backend">Global Backend</span>
+                <select id="visualBackend">
+                  <option value="auto">auto</option>
+                  <option value="ydotool">ydotool</option>
+                  <option value="xdotool">xdotool</option>
+                </select>
+              </label>
 
             </section>
 
@@ -210,10 +200,9 @@
               <div class="snippet-grid">
                 <button data-snippet="every 1s press space\n" data-i18n="snippets.independentFlow" type="button">Independent Flow</button>
                 <button data-snippet="every 50ms click left\n" data-i18n="snippets.mouseAction" type="button">Mouse Flow</button>
-                <button data-snippet="every 1s hold 200ms press r\n" data-i18n="snippets.holdAction" type="button">Hold Flow</button>
+                <button data-snippet="hold press r\n" data-i18n="snippets.holdAction" type="button">Hold Flow</button>
                 <button data-snippet="sequence 3s {\n  press r\n  wait 200ms\n  press a\n}\n" data-i18n="snippets.sequence" type="button">Multi-step Flow</button>
-                <button data-snippet="macro &quot;New macro&quot; {\n  enabled on\n  trigger side\n  start paused\n  every 50ms click left\n}\n" data-i18n="snippets.macroBlock" type="button">Macro Block</button>
-                <button data-snippet="start paused\n" data-i18n="snippets.startState" type="button">Start State</button>
+                <button data-snippet="macro &quot;New macro&quot; {\n  enabled on\n  trigger side\n  every 50ms click left\n}\n" data-i18n="snippets.macroBlock" type="button">Macro Block</button>
               </div>
             </section>
 
@@ -250,8 +239,8 @@
                 <li><code>trigger side extra f1</code></li>
                 <li><code>every 1s press r</code></li>
                 <li><code>every 50ms click left</code></li>
-                <li><code>every 1s hold 200ms press r</code></li>
-                <li><code>hold 200ms click left</code></li>
+                <li><code>hold press r</code></li>
+                <li><code>hold click left</code></li>
                 <li><code>sequence 3s { ... }</code></li>
               </ul>
             </section>

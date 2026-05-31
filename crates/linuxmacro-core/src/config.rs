@@ -16,7 +16,6 @@ macro "Left clicker" {
   description Toggle left click every 50ms with the side button.
   enabled on
   trigger side
-  start paused
   every 50ms click left
 }
 
@@ -24,7 +23,6 @@ macro "R burst" {
   description Toggle r every 100ms with the extra button.
   enabled off
   trigger extra
-  start paused
   every 100ms press r
 }
 
@@ -33,7 +31,6 @@ macro "R burst" {
 # macro "R then A" {
 #   enabled off
 #   trigger browserforward
-#   start paused
 #   sequence 3s {
 #     press r
 #     wait 200ms

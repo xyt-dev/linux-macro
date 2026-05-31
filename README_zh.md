@@ -90,7 +90,11 @@ linux-macro
 ```
 
 这会把 Tauri 桌面应用安装为 `~/.cargo/bin/linux-macro`。
-请确保 `~/.cargo/bin` 已加入 `PATH`。
+请确保 `~/.cargo/bin` 已加入 `PATH`。更新已有本地安装时加上 `--force`：
+
+```bash
+cargo install --path src-tauri --force
+```
 
 如果从 Git 仓库安装，使用同样的 package 和 bin 名称：
 
@@ -106,12 +110,24 @@ cargo run -p linuxmacro-app
 
 ### 5. 可选 CLI
 
+在仓库根目录中，不安装直接运行 CLI：
+
 ```bash
 cargo run -p linuxmacro -- init
 cargo run -p linuxmacro -- check
 cargo run -p linuxmacro -- run
 cargo run -p linuxmacro -- list-inputs
 ```
+
+安装或更新 CLI 到 `~/.cargo/bin/linuxmacro`：
+
+```bash
+cargo install --path crates/linuxmacro-cli --force
+linuxmacro check
+linuxmacro run
+```
+
+更新已有本地安装时使用 `--force`。
 
 ## 输入后端
 
@@ -203,7 +219,6 @@ macro "左键连点" {
   description 按下鼠标侧键切换 50ms 左键连点。
   enabled on
   trigger side
-  start paused
   every 50ms click left
 }
 
@@ -211,7 +226,6 @@ macro "R 后 A" {
   description 按下鼠标额外键切换一个序列宏。
   enabled on
   trigger extra
-  start paused
 
   sequence 3s {
     press r
@@ -229,20 +243,21 @@ macro "R 后 A" {
 - 单个宏内：`description <text>`
 - 单个宏内：`enabled on|off`
 - 单个宏内：`trigger side|extra|browserback|browserforward|f1..f12|BTN_SIDE|BTN_EXTRA|KEY_F1`
-- 单个宏内：`start paused|running`
+- 单个宏内：`hold press <key>`，宏运行时按下并保持键盘按键
+- 单个宏内：`hold click left|right|middle|side|extra`，宏运行时按下并保持鼠标按钮
 - 单个宏内：`every <duration> press <key>`
 - 单个宏内：`every <duration> click left|right|middle|side|extra`
-- 单个宏内：`every <duration> hold <duration> press <key>`
-- 单个宏内：`every <duration> hold <duration> click left|right|middle|side|extra`
-- 单个宏内：`sequence <duration> { ... }`，块内支持 `press <key>`、`click <button>`、`hold <duration> press|click <target>` 和 `wait <duration>`
+- 单个宏内：`sequence <duration> { ... }`，块内支持 `press <key>`、`click <button>` 和 `wait <duration>`
 
-时间可以写成 `1`、`1s` 或 `200ms`。
+`hold` 是切换保持：宏开始运行时按下，宏暂停或停止时释放；不需要周期，也不需要长按秒数。`every`、`sequence`、`wait` 的时间可以写成 `1`、`1s` 或 `200ms`。
 
 图形编辑器里不需要选择键盘/鼠标。目标写 `left`、`right`、`middle`、`side`、`extra`
 会按鼠标按钮处理，其它目标按键盘按键处理。如果确实需要处理歧义，可以写 `key:left`
 或 `mouse:left` 强制指定。
 
-每个已启用宏必须使用不同触发键。解析器会拒绝两个已启用宏共用同一个触发键，避免一个物理按键误切换多个宏。已禁用宏可以暂时保留旧触发键，启用前再调整。图形编辑器只提供更安全的启用键：鼠标侧键、额外键、浏览器前进/后退和 F1-F12；不会提供字母、数字、空格或鼠标主按键作为启用键。
+每个已启用宏必须使用不同触发键。解析器会拒绝两个已启用宏共用同一个触发键，避免一个物理按键误切换多个宏。已启用宏也不能同时保持同一个键盘按键或鼠标按钮，避免一个宏释放另一个宏仍希望保持的输入。已禁用宏可以暂时保留旧触发键或保持输入，启用前再调整。图形编辑器只提供更安全的启用键：鼠标侧键、额外键、浏览器前进/后退和 F1-F12；不会提供字母、数字、空格或鼠标主按键作为启用键。
+
+宏默认以暂停状态启动。旧配置里显式写了 `start paused|running` 仍然可以解析，但图形编辑器不再显示或生成这个设置。
 
 旧版单宏配置仍然兼容：顶层 `name`、`toggle`、`every`、`sequence` 等写法可以继续解析；在图形编辑器保存后会转换成单个 `macro "name" { ... }` 块。
 

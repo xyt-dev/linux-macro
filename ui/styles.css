@@ -548,12 +548,6 @@ input[type="checkbox"] {
   line-height: 1.45;
 }
 
-.field-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-
 .macro-list {
   display: grid;
   gap: 10px;
@@ -863,21 +857,13 @@ input[type="checkbox"] {
 
 .step-node {
   display: grid;
-  grid-template-columns: 100px minmax(120px, 1fr) 100px 34px;
+  grid-template-columns: 110px minmax(120px, 1fr) 34px;
   gap: 10px;
   align-items: center;
 }
 
-.step-node.wait-step {
-  grid-template-columns: 110px minmax(120px, 1fr) 34px;
-}
-
 .step-node button {
   justify-self: end;
-}
-
-.step-spacer {
-  min-height: 1px;
 }
 
 .step-actions {

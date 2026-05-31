@@ -29,7 +29,6 @@ const selectedMacroTitle = document.querySelector("#selectedMacroTitle");
 const visualName = document.querySelector("#visualName");
 const visualDescription = document.querySelector("#visualDescription");
 const visualBackend = document.querySelector("#visualBackend");
-const visualStart = document.querySelector("#visualStart");
 const languageToggle = document.querySelector("#languageToggle");
 const triggerSuggestions = document.querySelector("#triggerSuggestions");
 const triggerChips = document.querySelector("#triggerChips");
@@ -123,13 +122,15 @@ const I18N = {
     "field.description": "Description",
     "field.descriptionPlaceholder": "Macro description",
     "field.backend": "Global Backend",
-    "field.startState": "Start State",
     "triggers.title": "Trigger Keys",
     "triggers.copy": "Drag to a macro card on the left, or click to add to the current macro. Only side buttons, browser keys, and F1-F12 are offered.",
     "triggers.usedBy": " · used by {name}",
     "flow.title": "Independent Flows",
     "flow.addIndependent": "Add Independent Flow",
     "flow.independent": "Independent Flow",
+    "flow.tapFlow": "Tap Flow",
+    "flow.holdFlow": "Hold Flow",
+    "flow.sequenceFlow": "Sequence Flow",
     "flow.delete": "Delete flow",
     "flow.action": "Action",
     "flow.tap": "Tap",
@@ -137,7 +138,6 @@ const I18N = {
     "flow.wait": "Wait",
     "flow.periodSeconds": "Period (s)",
     "flow.waitSeconds": "Wait (s)",
-    "flow.holdSeconds": "Hold seconds",
     "flow.addAction": "Add Action",
     "flow.addWait": "Add Wait",
     "flow.deleteStep": "Delete step",
@@ -150,24 +150,23 @@ const I18N = {
     "snippets.holdAction": "Hold Flow",
     "snippets.sequence": "Multi-step Flow",
     "snippets.macroBlock": "Macro Block",
-    "snippets.startState": "Start State",
     "validation.title": "Validation",
     "validation.unchecked": "Unchecked",
     "validation.valid": "Valid",
     "validation.invalid": "Invalid",
     "validation.default": "Save to show parse results here.",
-    "validation.success": "Parsed: {macros} macros, {tasks} tasks, {lines} lines.",
+    "validation.success": "Parsed: {macros} macros, {tasks} flows, {lines} lines.",
     "validation.fix": "Fix syntax errors to show macro info.",
     "summary.title": "Macro Info",
     "summary.empty": "No macro info.",
     "summary.backend": "Backend",
     "summary.macros": "Macros",
-    "summary.tasks": "Tasks",
+    "summary.tasks": "Flows",
     "summary.triggers": "Triggers",
     "summary.enabledCount": "{enabled}/{total} enabled",
-    "summary.taskCount": "{count} tasks",
-    "tasks.title": "Task Preview",
-    "tasks.empty": "No task preview.",
+    "summary.taskCount": "{count} flows",
+    "tasks.title": "Flow Preview",
+    "tasks.empty": "No flow preview.",
     "syntax.title": "Syntax Quick Reference",
     "status.notRunning": "Not Running",
     "status.stopped": "Stopped",
@@ -176,7 +175,7 @@ const I18N = {
     "status.error": "Error",
     "status.reloadFailed": "Reload failed",
     "status.waitingLoad": "Waiting to load",
-    "status.runtime": "{name} · {backend} · {enabled}/{total} macros enabled · {tasks} tasks · {event}",
+    "status.runtime": "{name} · {backend} · {enabled}/{total} macros enabled · {tasks} flows · {event}",
     "power.start": "Start",
     "power.stop": "Stop",
     "power.startAria": "Start macro",
@@ -247,21 +246,22 @@ const I18N = {
     "field.description": "描述",
     "field.descriptionPlaceholder": "宏说明",
     "field.backend": "全局后端",
-    "field.startState": "启动状态",
     "triggers.title": "启用键",
     "triggers.copy": "拖到左侧宏卡片分配，或点击加入当前宏。只提供侧键、浏览器键和 F1-F12。",
     "triggers.usedBy": " · 已由 {name} 使用",
     "flow.title": "独立流程",
     "flow.addIndependent": "添加新独立流程",
     "flow.independent": "独立流程",
+    "flow.tapFlow": "短按流程",
+    "flow.holdFlow": "保持流程",
+    "flow.sequenceFlow": "多步骤流程",
     "flow.delete": "删除流程",
     "flow.action": "动作",
     "flow.tap": "短按",
-    "flow.hold": "长按",
+    "flow.hold": "保持",
     "flow.wait": "等待",
     "flow.periodSeconds": "周期(s)",
     "flow.waitSeconds": "等待(s)",
-    "flow.holdSeconds": "长按秒数",
     "flow.addAction": "添加动作",
     "flow.addWait": "添加等待",
     "flow.deleteStep": "删除步骤",
@@ -271,27 +271,26 @@ const I18N = {
     "snippets.title": "快速插入",
     "snippets.independentFlow": "独立流程",
     "snippets.mouseAction": "鼠标流程",
-    "snippets.holdAction": "长按流程",
+    "snippets.holdAction": "保持流程",
     "snippets.sequence": "多步骤流程",
     "snippets.macroBlock": "宏块",
-    "snippets.startState": "启动状态",
     "validation.title": "校验结果",
     "validation.unchecked": "未校验",
     "validation.valid": "有效",
     "validation.invalid": "有错误",
     "validation.default": "保存后会在这里显示解析结果。",
-    "validation.success": "解析成功：{macros} 个宏，{tasks} 个任务，{lines} 行。",
+    "validation.success": "解析成功：{macros} 个宏，{tasks} 个流程，{lines} 行。",
     "validation.fix": "修正语法后显示宏信息。",
     "summary.title": "宏信息",
     "summary.empty": "暂无宏信息。",
     "summary.backend": "后端",
     "summary.macros": "宏数量",
-    "summary.tasks": "任务",
+    "summary.tasks": "流程",
     "summary.triggers": "触发",
     "summary.enabledCount": "{enabled}/{total} 启用",
-    "summary.taskCount": "{count} 个",
-    "tasks.title": "任务预览",
-    "tasks.empty": "暂无任务预览。",
+    "summary.taskCount": "{count} 个流程",
+    "tasks.title": "流程预览",
+    "tasks.empty": "暂无流程预览。",
     "syntax.title": "语法速查",
     "status.notRunning": "未运行",
     "status.stopped": "已停止",
@@ -300,7 +299,7 @@ const I18N = {
     "status.error": "错误",
     "status.reloadFailed": "重载失败",
     "status.waitingLoad": "等待加载",
-    "status.runtime": "{name} · {backend} · {enabled}/{total} 个宏启用 · {tasks} 个任务 · {event}",
+    "status.runtime": "{name} · {backend} · {enabled}/{total} 个宏启用 · {tasks} 个流程 · {event}",
     "power.start": "启动",
     "power.stop": "停止",
     "power.startAria": "启动宏",
@@ -408,7 +407,6 @@ function defaultMacro(index = 0) {
       enabled: true,
       name: "Left clicker",
       description: "Toggle left click every 50ms with the side button.",
-      startRunning: false,
       triggerButtons: ["BTN_SIDE"],
       tasks: [{ type: "every", interval: 0.05, steps: [{ kind: "click", button: "left" }] }],
     },
@@ -416,7 +414,6 @@ function defaultMacro(index = 0) {
       enabled: false,
       name: "R burst",
       description: "Toggle r every 100ms with the extra button.",
-      startRunning: false,
       triggerButtons: ["BTN_EXTRA"],
       tasks: [{ type: "every", interval: 0.1, steps: [{ kind: "press", key: "r" }] }],
     },
@@ -426,7 +423,6 @@ function defaultMacro(index = 0) {
     enabled: true,
     name: `Macro ${index + 1}`,
     description: "",
-    startRunning: false,
     triggerButtons: [nextAvailableTrigger(index)],
     tasks: [{ type: "every", interval: 1, steps: [{ kind: "press", key: "space" }] }],
   };
@@ -561,7 +557,7 @@ function renderProgram(program) {
 
   const macros = programMacros(program);
   const enabledCount = macros.filter((macro) => macro.enabled).length;
-  const taskCount = macros.reduce((count, macro) => count + (macro.tasks?.length || 0), 0);
+  const taskCount = macros.reduce((count, macro) => count + (macro.holds?.length || 0) + (macro.tasks?.length || 0), 0);
   macroSummary.innerHTML = [
     [t("summary.backend"), program.backend],
     [t("summary.macros"), t("summary.enabledCount", { enabled: enabledCount, total: macros.length })],
@@ -571,16 +567,25 @@ function renderProgram(program) {
     .map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`)
     .join("");
 
-  taskList.innerHTML = macros
-    .flatMap((macro, macroIndex) => {
-      return (macro.tasks || []).map((task, taskIndex) => {
-        return `<div class="task-item">
-          <span>${macroIndex + 1}.${taskIndex + 1}</span>
-          <p><strong>${escapeHtml(macro.name)}</strong> · ${escapeHtml(task.description)}</p>
-        </div>`;
-      });
-    })
-    .join("");
+  const flowItems = macros.flatMap((macro, macroIndex) => {
+    const holds = (macro.holds || []).map((hold) => describeProgramHold(hold));
+    const tasks = (macro.tasks || []).map((task) => task.description);
+    return [...holds, ...tasks].map((description, flowIndex) => {
+      return `<div class="task-item">
+        <span>${macroIndex + 1}.${flowIndex + 1}</span>
+        <p><strong>${escapeHtml(macro.name)}</strong> · ${escapeHtml(description)}</p>
+      </div>`;
+    });
+  });
+
+  taskList.innerHTML = flowItems.length
+    ? flowItems.join("")
+    : `<div class="empty">${escapeHtml(t("tasks.empty"))}</div>`;
+}
+
+function describeProgramHold(hold) {
+  if (hold.kind === "hold-click") return `hold click ${hold.button || "left"}`;
+  return `hold press ${hold.key || "space"}`;
 }
 
 function syncVisualFromProgram(program) {
@@ -608,33 +613,39 @@ function programMacros(program) {
       description: program.description || "",
       trigger_buttons: program.toggle_buttons || ["BTN_SIDE"],
       grab_toggle_device: program.grab_toggle_device ?? false,
-      start_running: program.start_running ?? false,
+      holds: program.holds || [],
       tasks: program.tasks || [],
     },
   ];
 }
 
 function macroToVisualMacro(macro, index) {
+  const holdTasks = (macro.holds || []).map((hold) => {
+    const step = hold.kind === "hold-click"
+      ? { kind: "hold-click", button: hold.button || "left" }
+      : { kind: "hold-key", key: hold.key || "space" };
+    return { type: "hold", interval: 1, steps: [step] };
+  });
+
+  const scheduledTasks = (macro.tasks || []).map((task) => {
+    const steps = (task.steps || []).map((step) => {
+      if (step.kind === "wait") return { kind: "wait", seconds: Number(step.seconds) || 0.2 };
+      if (step.kind === "click") return { kind: "click", button: step.button || "left" };
+      return { kind: "press", key: step.key || "space" };
+    });
+    return {
+      type: steps.length === 1 && isInputStep(steps[0]) ? "every" : "sequence",
+      interval: Number(task.interval) || 1,
+      steps: steps.length ? steps : [{ kind: "press", key: "space" }],
+    };
+  });
+
   return {
     enabled: macro.enabled ?? true,
     name: macro.name || `Macro ${index + 1}`,
     description: macro.description || "",
-    startRunning: Boolean(macro.start_running),
     triggerButtons: [...(macro.trigger_buttons || macro.toggle_buttons || [nextAvailableTrigger(index)])],
-    tasks: (macro.tasks || []).map((task) => {
-      const steps = (task.steps || []).map((step) => {
-        if (step.kind === "wait") return { kind: "wait", seconds: Number(step.seconds) || 0.2 };
-        if (step.kind === "hold-key") return { kind: "hold-key", key: step.key || "space", seconds: Number(step.seconds) || 0.2 };
-        if (step.kind === "hold-click") return { kind: "hold-click", button: step.button || "left", seconds: Number(step.seconds) || 0.2 };
-        if (step.kind === "click") return { kind: "click", button: step.button || "left" };
-        return { kind: "press", key: step.key || "space" };
-      });
-      return {
-        type: steps.length === 1 && isInputStep(steps[0]) ? "every" : "sequence",
-        interval: Number(task.interval) || 1,
-        steps: steps.length ? steps : [{ kind: "press", key: "space" }],
-      };
-    }),
+    tasks: [...holdTasks, ...scheduledTasks],
   };
 }
 
@@ -645,7 +656,6 @@ function renderVisualEditor() {
   visualName.value = macro.name;
   visualDescription.value = macro.description;
   visualBackend.value = model.backend;
-  visualStart.value = macro.startRunning ? "running" : "paused";
   renderMacroList();
   renderTriggerChips();
   renderTriggerSuggestions();
@@ -659,7 +669,6 @@ function normalizeVisualModel(model) {
         enabled: model.enabled ?? true,
         name: model.name || "Macro",
         description: model.description || "",
-        startRunning: Boolean(model.startRunning),
         triggerButtons: [...(model.toggleButtons || ["BTN_SIDE"])],
         tasks: model.tasks || [{ type: "every", interval: 1, steps: [{ kind: "press", key: "space" }] }],
       },
@@ -676,16 +685,30 @@ function normalizeVisualMacro(macro, index) {
   macro.enabled = macro.enabled !== false;
   macro.name = macro.name || `Macro ${index + 1}`;
   macro.description = macro.description || "";
-  macro.startRunning = Boolean(macro.startRunning);
   macro.triggerButtons = Array.isArray(macro.triggerButtons) && macro.triggerButtons.length ? macro.triggerButtons : [nextAvailableTrigger(index)];
   macro.tasks = Array.isArray(macro.tasks) && macro.tasks.length ? macro.tasks : [{ type: "every", interval: 1, steps: [{ kind: "press", key: "space" }] }];
-  macro.tasks.forEach((task) => {
-    task.interval = Number(task.interval) > 0 ? Number(task.interval) : 1;
-    task.steps = Array.isArray(task.steps) && task.steps.length ? task.steps : [{ kind: "press", key: "space" }];
-    task.steps = task.steps.map(normalizeVisualStep);
-    task.type = task.steps.length === 1 && isInputStep(task.steps[0]) ? "every" : "sequence";
-  });
+  macro.tasks.forEach((task) => normalizeVisualTask(task));
   return macro;
+}
+
+function normalizeVisualTask(task) {
+  task.interval = Number(task.interval) > 0 ? Number(task.interval) : 1;
+  task.steps = Array.isArray(task.steps) && task.steps.length ? task.steps : [{ kind: "press", key: "space" }];
+  task.steps = task.steps.map(normalizeVisualStep);
+
+  if (task.type === "hold" || (task.steps.length === 1 && stepMode(task.steps[0]) === "hold")) {
+    const action = firstActionStep(task);
+    task.type = "hold";
+    task.steps = [makeActionStep("hold", stepValue(action))];
+  } else if (task.steps.length === 1 && isInputStep(task.steps[0]) && stepMode(task.steps[0]) === "tap") {
+    task.type = "every";
+  } else {
+    task.type = "sequence";
+    task.steps = task.steps.map((step) => {
+      if (step.kind === "wait") return step;
+      return makeActionStep("tap", stepValue(step));
+    });
+  }
 }
 
 function normalizeVisualStep(step) {
@@ -760,7 +783,7 @@ function renderFlowTasks() {
       return `<article class="flow-card" data-task-card="${taskIndex}">
         <div class="flow-card-head">
           <span class="flow-number">${taskIndex + 1}</span>
-          <strong class="flow-card-title">${escapeHtml(t("flow.independent"))}</strong>
+          <strong class="flow-card-title">${escapeHtml(flowTitle(task))}</strong>
         </div>
         <button class="delete-button flow-remove-button" data-remove-task="${taskIndex}" type="button" aria-label="${escapeHtml(t("flow.delete"))}">×</button>
         ${renderIndependentFlowTask(task, taskIndex)}
@@ -769,36 +792,45 @@ function renderFlowTasks() {
     .join("");
 }
 
+function flowTitle(task) {
+  if (task.type === "hold") return t("flow.holdFlow");
+  if (task.type === "sequence") return t("flow.sequenceFlow");
+  return t("flow.tapFlow");
+}
+
 function renderIndependentFlowTask(task, taskIndex) {
   const steps = task.steps
-    .map((step, stepIndex) => renderStepNode(step, taskIndex, stepIndex))
+    .map((step, stepIndex) => renderStepNode(step, task, taskIndex, stepIndex))
     .join(`<div class="flow-arrow vertical">↓</div>`);
-  return `<div class="independent-flow">
-    <label class="flow-node delay editable flow-period-node">
-      <span>${escapeHtml(t("flow.periodSeconds"))}</span>
+  const timingNode = task.type === "hold" ? "" : `<label class="flow-node delay editable flow-period-node">
+      <span>${escapeHtml(t(task.type === "sequence" ? "flow.waitSeconds" : "flow.periodSeconds"))}</span>
       <input data-task-index="${taskIndex}" data-task-field="interval" type="number" min="0.001" step="0.001" value="${formatNumber(task.interval)}" />
-    </label>
-    <div class="flow-sequence">
-      ${steps}
-      <div class="step-actions">
+    </label>`;
+  const stepActions = task.type === "hold" ? "" : `<div class="step-actions">
         <button class="ghost-button compact-button" data-add-step="action" data-task-index="${taskIndex}" type="button">${escapeHtml(t("flow.addAction"))}</button>
         <button class="ghost-button compact-button" data-add-step="wait" data-task-index="${taskIndex}" type="button">${escapeHtml(t("flow.addWait"))}</button>
-      </div>
+      </div>`;
+  return `<div class="independent-flow">
+    ${timingNode}
+    <div class="flow-sequence">
+      ${steps}
+      ${stepActions}
     </div>
   </div>`;
 }
 
-function renderStepNode(step, taskIndex, stepIndex) {
+function renderStepNode(step, task, taskIndex, stepIndex) {
   const isWait = step.kind === "wait";
+  const holdOption = task.type === "sequence" ? "" : `<option value="hold" ${stepMode(step) === "hold" ? "selected" : ""}>${escapeHtml(t("flow.hold"))}</option>`;
   if (isWait) {
     return `<div class="flow-node step-node wait-step">
       <select data-task-index="${taskIndex}" data-step-index="${stepIndex}" data-step-field="kind">
         <option value="tap">${escapeHtml(t("flow.tap"))}</option>
-        <option value="hold">${escapeHtml(t("flow.hold"))}</option>
+        ${holdOption}
         <option value="wait" selected>${escapeHtml(t("flow.wait"))}</option>
       </select>
       <input data-task-index="${taskIndex}" data-step-index="${stepIndex}" data-step-field="value"
-        type="number" min="0.001" step="0.001" value="${escapeHtml(formatNumber(step.seconds || 0.2))}" />
+        type="number" min="0.001" step="0.001" value="${escapeHtml(formatNumber(step.seconds || 0.2))}" title="${escapeHtml(t("flow.waitSeconds"))}" />
       <button class="delete-button" data-remove-step="${stepIndex}" data-task-index="${taskIndex}" type="button" aria-label="${escapeHtml(t("flow.deleteStep"))}">×</button>
     </div>`;
   }
@@ -806,11 +838,10 @@ function renderStepNode(step, taskIndex, stepIndex) {
   return `<div class="flow-node step-node">
     <select data-task-index="${taskIndex}" data-step-index="${stepIndex}" data-step-field="kind">
       <option value="tap" ${stepMode(step) === "tap" ? "selected" : ""}>${escapeHtml(t("flow.tap"))}</option>
-      <option value="hold" ${stepMode(step) === "hold" ? "selected" : ""}>${escapeHtml(t("flow.hold"))}</option>
+      ${holdOption}
       <option value="wait">${escapeHtml(t("flow.wait"))}</option>
     </select>
     <input data-task-index="${taskIndex}" data-step-index="${stepIndex}" data-step-field="value" type="text" value="${escapeHtml(stepValue(step))}" autocomplete="off" />
-    ${stepMode(step) === "hold" ? `<input data-task-index="${taskIndex}" data-step-index="${stepIndex}" data-step-field="hold" type="number" min="0.001" step="0.001" value="${escapeHtml(formatNumber(stepHoldSeconds(step)))}" title="${escapeHtml(t("flow.holdSeconds"))}" />` : `<span class="step-spacer" aria-hidden="true"></span>`}
     <button class="delete-button" data-remove-step="${stepIndex}" data-task-index="${taskIndex}" type="button" aria-label="${escapeHtml(t("flow.deleteStep"))}">×</button>
   </div>`;
 }
@@ -821,7 +852,6 @@ function updateVisualBasics() {
   macro.name = visualName.value.trim() || "Macro";
   macro.description = visualDescription.value.trim();
   model.backend = visualBackend.value;
-  macro.startRunning = visualStart.value === "running";
   renderMacroList();
   syncScriptFromVisual();
 }
@@ -891,34 +921,26 @@ function handleFlowInput(event) {
   const step = task.steps[stepIndex];
   if (target.dataset.stepField === "kind") {
     if (target.value === "wait") {
+      task.type = "sequence";
       task.steps[stepIndex] = { kind: "wait", seconds: 0.2 };
+    } else if (target.value === "hold") {
+      const action = isInputStep(step) ? step : { kind: "press", key: "space" };
+      task.type = "hold";
+      task.steps = [makeActionStep("hold", stepValue(action))];
     } else {
       const action = isInputStep(step) ? step : { kind: "press", key: "space" };
-      task.steps[stepIndex] = makeActionStep(
-        target.value,
-        stepValue(action),
-        stepHoldSeconds(action),
-      );
+      task.steps[stepIndex] = makeActionStep("tap", stepValue(action));
+      if (task.type === "hold") task.type = "every";
     }
+    normalizeVisualTask(task);
     renderFlowTasks();
-    syncScriptFromVisual();
-  } else if (target.dataset.stepField === "hold") {
-    if (!isInputStep(step)) return;
-    task.steps[stepIndex] = makeActionStep(
-      "hold",
-      stepValue(step),
-      positiveNumber(target.value, 0.2),
-    );
     syncScriptFromVisual();
   } else if (target.dataset.stepField === "value") {
     if (step.kind === "wait") {
       step.seconds = positiveNumber(target.value, 0.2);
     } else if (isInputStep(step)) {
-      task.steps[stepIndex] = makeActionStep(
-        stepMode(step),
-        target.value,
-        stepHoldSeconds(step),
-      );
+      task.steps[stepIndex] = makeActionStep(stepMode(step), target.value);
+      normalizeVisualTask(task);
     }
     syncScriptFromVisual();
   }
@@ -938,11 +960,14 @@ function handleFlowClick(event) {
   const addStepButton = event.target.closest("[data-add-step]");
   if (addStepButton) {
     const task = macro.tasks[Number(addStepButton.dataset.taskIndex)];
+    if (!task || task.type === "hold") return;
+    task.type = "sequence";
     task.steps.push(
       addStepButton.dataset.addStep === "wait"
         ? { kind: "wait", seconds: 0.2 }
         : { kind: "press", key: "space" },
     );
+    normalizeVisualTask(task);
     renderFlowTasks();
     syncScriptFromVisual();
     return;
@@ -1210,17 +1235,15 @@ function visualModelToScript(model) {
     if (macro.description) lines.push(`  description ${macro.description}`);
     lines.push(`  enabled ${macro.enabled ? "on" : "off"}`);
     lines.push(`  trigger ${macro.triggerButtons.join(" ")}`);
-    lines.push(`  start ${macro.startRunning ? "running" : "paused"}`);
     lines.push("");
 
     for (const task of macro.tasks) {
-      if (task.type === "every") {
+      if (task.type === "hold") {
         const action = firstActionStep(task);
-        if (stepMode(action) === "hold") {
-          lines.push(
-            `  every ${formatDuration(task.interval)} hold ${formatDuration(stepHoldSeconds(action))} ${scriptActionCommand(action)} ${scriptActionValue(action)}`,
-          );
-        } else if (stepTargetType(action) === "mouse") {
+        lines.push(`  hold ${scriptActionCommand(action)} ${scriptActionValue(action)}`);
+      } else if (task.type === "every") {
+        const action = firstActionStep(task);
+        if (stepTargetType(action) === "mouse") {
           lines.push(`  every ${formatDuration(task.interval)} click ${scriptActionValue(action)}`);
         } else {
           lines.push(`  every ${formatDuration(task.interval)} press ${scriptActionValue(action)}`);
@@ -1230,8 +1253,6 @@ function visualModelToScript(model) {
         for (const step of task.steps) {
           if (step.kind === "wait") {
             lines.push(`    wait ${formatDuration(step.seconds || 0.2)}`);
-          } else if (stepMode(step) === "hold") {
-            lines.push(`    hold ${formatDuration(stepHoldSeconds(step))} ${scriptActionCommand(step)} ${scriptActionValue(step)}`);
           } else if (stepTargetType(step) === "mouse") {
             lines.push(`    click ${scriptActionValue(step)}`);
           } else {
@@ -1460,18 +1481,10 @@ function isInputStep(step) {
 
 function normalizeActionStep(step) {
   if (step.kind === "hold-click") {
-    return {
-      kind: "hold-click",
-      button: normalizeMouseButton(step.button),
-      seconds: positiveNumber(step.seconds, 0.2),
-    };
+    return { kind: "hold-click", button: normalizeMouseButton(step.button) };
   }
   if (step.kind === "hold-key") {
-    return {
-      kind: "hold-key",
-      key: normalizeKey(step.key),
-      seconds: positiveNumber(step.seconds, 0.2),
-    };
+    return { kind: "hold-key", key: normalizeKey(step.key) };
   }
   if (step.kind === "click") return { kind: "click", button: normalizeMouseButton(step.button) };
   return { kind: "press", key: normalizeKey(step.key) };
@@ -1489,23 +1502,15 @@ function stepValue(step) {
   return stepTargetType(step) === "mouse" ? normalizeMouseButton(step.button) : normalizeKey(step.key);
 }
 
-function stepHoldSeconds(step) {
-  return positiveNumber(step?.seconds, 0.2);
-}
-
-function makeActionStep(mode, value, seconds = 0.2) {
+function makeActionStep(mode, value) {
   const { targetType, targetValue } = parseActionTarget(value);
   if (targetType === "mouse") {
     const button = normalizeMouseButton(targetValue);
-    return mode === "hold"
-      ? { kind: "hold-click", button, seconds: positiveNumber(seconds, 0.2) }
-      : { kind: "click", button };
+    return mode === "hold" ? { kind: "hold-click", button } : { kind: "click", button };
   }
 
   const key = normalizeKey(targetValue);
-  return mode === "hold"
-    ? { kind: "hold-key", key, seconds: positiveNumber(seconds, 0.2) }
-    : { kind: "press", key };
+  return mode === "hold" ? { kind: "hold-key", key } : { kind: "press", key };
 }
 
 function parseActionTarget(value) {
@@ -1640,7 +1645,7 @@ editor.addEventListener("scroll", () => {
   lineNumbers.scrollTop = editor.scrollTop;
 });
 
-[visualName, visualDescription, visualBackend, visualStart].forEach((element) => {
+[visualName, visualDescription, visualBackend].forEach((element) => {
   element.addEventListener("input", updateVisualBasics);
   element.addEventListener("change", updateVisualBasics);
 });
