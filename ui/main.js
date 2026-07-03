@@ -123,7 +123,8 @@ const I18N = {
     "field.descriptionPlaceholder": "Macro description",
     "field.backend": "Global Backend",
     "triggers.title": "Trigger Keys",
-    "triggers.copy": "Drag to a macro card on the left, or click to add to the current macro. Only side buttons, browser keys, and F1-F12 are offered.",
+    "triggers.copy": "Drag to a macro card on the left, or click to toggle it for the current macro. Only side buttons, browser keys, and F1-F12 are offered.",
+    "triggers.disableFirst": "Disable this macro before removing its last trigger.",
     "triggers.usedBy": " · used by {name}",
     "flow.title": "Independent Flows",
     "flow.addIndependent": "Add Independent Flow",
@@ -247,7 +248,8 @@ const I18N = {
     "field.descriptionPlaceholder": "宏说明",
     "field.backend": "全局后端",
     "triggers.title": "启用键",
-    "triggers.copy": "拖到左侧宏卡片分配，或点击加入当前宏。只提供侧键、浏览器键和 F1-F12。",
+    "triggers.copy": "拖到左侧宏卡片分配，或点击为当前宏切换启用。只提供侧键、浏览器键和 F1-F12。",
+    "triggers.disableFirst": "请先关闭这个宏，再取消最后一个启用键。",
     "triggers.usedBy": " · 已由 {name} 使用",
     "flow.title": "独立流程",
     "flow.addIndependent": "添加新独立流程",
@@ -404,26 +406,26 @@ function defaultVisualModel() {
 function defaultMacro(index = 0) {
   const defaults = [
     {
-      enabled: true,
+      enabled: false,
       name: "Left clicker",
       description: "Toggle left click every 50ms with the side button.",
-      triggerButtons: ["BTN_SIDE"],
+      triggerButtons: [],
       tasks: [{ type: "every", interval: 0.05, steps: [{ kind: "click", button: "left" }] }],
     },
     {
       enabled: false,
       name: "R burst",
       description: "Toggle r every 100ms with the extra button.",
-      triggerButtons: ["BTN_EXTRA"],
+      triggerButtons: [],
       tasks: [{ type: "every", interval: 0.1, steps: [{ kind: "press", key: "r" }] }],
     },
   ];
   if (defaults[index]) return JSON.parse(JSON.stringify(defaults[index]));
   return {
-    enabled: true,
+    enabled: false,
     name: `Macro ${index + 1}`,
     description: "",
-    triggerButtons: [nextAvailableTrigger(index)],
+    triggerButtons: [],
     tasks: [{ type: "every", interval: 1, steps: [{ kind: "press", key: "space" }] }],
   };
 }
@@ -611,7 +613,7 @@ function programMacros(program) {
       enabled: program.enabled ?? true,
       name: program.name || "Macro",
       description: program.description || "",
-      trigger_buttons: program.toggle_buttons || ["BTN_SIDE"],
+      trigger_buttons: program.toggle_buttons || [],
       grab_toggle_device: program.grab_toggle_device ?? false,
       holds: program.holds || [],
       tasks: program.tasks || [],
@@ -644,7 +646,7 @@ function macroToVisualMacro(macro, index) {
     enabled: macro.enabled ?? true,
     name: macro.name || `Macro ${index + 1}`,
     description: macro.description || "",
-    triggerButtons: [...(macro.trigger_buttons || macro.toggle_buttons || [nextAvailableTrigger(index)])],
+    triggerButtons: [...(macro.trigger_buttons || macro.toggle_buttons || [])],
     tasks: [...holdTasks, ...scheduledTasks],
   };
 }
@@ -669,7 +671,7 @@ function normalizeVisualModel(model) {
         enabled: model.enabled ?? true,
         name: model.name || "Macro",
         description: model.description || "",
-        triggerButtons: [...(model.toggleButtons || ["BTN_SIDE"])],
+        triggerButtons: [...(model.toggleButtons || [])],
         tasks: model.tasks || [{ type: "every", interval: 1, steps: [{ kind: "press", key: "space" }] }],
       },
     ];
@@ -685,7 +687,7 @@ function normalizeVisualMacro(macro, index) {
   macro.enabled = macro.enabled !== false;
   macro.name = macro.name || `Macro ${index + 1}`;
   macro.description = macro.description || "";
-  macro.triggerButtons = Array.isArray(macro.triggerButtons) && macro.triggerButtons.length ? macro.triggerButtons : [nextAvailableTrigger(index)];
+  macro.triggerButtons = Array.isArray(macro.triggerButtons) ? macro.triggerButtons : [];
   macro.tasks = Array.isArray(macro.tasks) && macro.tasks.length ? macro.tasks : [{ type: "every", interval: 1, steps: [{ kind: "press", key: "space" }] }];
   macro.tasks.forEach((task) => normalizeVisualTask(task));
   return macro;
@@ -745,14 +747,7 @@ function renderMacroList() {
 }
 
 function renderTriggerChips() {
-  const macro = currentMacro();
-  triggerChips.innerHTML = macro.triggerButtons
-    .map((trigger, index) => {
-      return `<button class="chip" data-remove-trigger="${index}" type="button">
-        <span>${escapeHtml(trigger)}</span><b>×</b>
-      </button>`;
-    })
-    .join("");
+  triggerChips.innerHTML = "";
 }
 
 function renderTriggerSuggestions() {
@@ -765,9 +760,9 @@ function renderTriggerSuggestions() {
     .map(([alias, canonical, description]) => {
       const selected = macro.triggerButtons.includes(canonical);
       const owner = owners.get(canonical)?.find((item) => item.index !== model.selectedMacroIndex);
-      const disabled = selected || Boolean(owner);
+      const disabled = !selected && Boolean(owner);
       const ownerText = owner ? t("triggers.usedBy", { name: owner.name }) : "";
-      return `<button class="suggestion-item" data-add-trigger="${escapeHtml(canonical)}" data-trigger-option="${escapeHtml(canonical)}" type="button" draggable="${disabled ? "false" : "true"}" ${disabled ? "disabled" : ""}>
+      return `<button class="suggestion-item ${selected ? "selected" : ""}" data-toggle-trigger="${escapeHtml(canonical)}" data-trigger-option="${escapeHtml(canonical)}" type="button" draggable="${!selected && !disabled ? "true" : "false"}" aria-pressed="${selected ? "true" : "false"}" ${disabled ? "disabled" : ""}>
         <strong>${escapeHtml(alias)}</strong>
         <span>${escapeHtml(canonical)}</span>
         <small>${escapeHtml(localized(description) + ownerText)}</small>
@@ -856,8 +851,23 @@ function updateVisualBasics() {
   syncScriptFromVisual();
 }
 
-function addTrigger(canonical) {
-  addTriggerToMacro(state.visualModel.selectedMacroIndex, canonical);
+function toggleTrigger(canonical) {
+  const model = normalizeVisualModel(state.visualModel);
+  const macro = currentMacro();
+  const triggerIndex = macro.triggerButtons.indexOf(canonical);
+
+  if (triggerIndex >= 0) {
+    if (macro.enabled && macro.triggerButtons.length === 1) {
+      setVisualStatus("warning", t("triggers.disableFirst"));
+      return;
+    }
+    macro.triggerButtons.splice(triggerIndex, 1);
+    renderVisualEditor();
+    syncScriptFromVisual();
+    return;
+  }
+
+  addTriggerToMacro(model.selectedMacroIndex, canonical);
 }
 
 function addTriggerToMacro(macroIndex, canonical) {
@@ -877,16 +887,6 @@ function isAssignableTrigger(canonical, macroIndex) {
   return !model.macros.some((macro, index) => {
     return index !== macroIndex && macro.triggerButtons.includes(canonical);
   });
-}
-
-function removeTrigger(index) {
-  const macro = currentMacro();
-  macro.triggerButtons.splice(index, 1);
-  normalizeVisualModel(state.visualModel);
-  renderTriggerChips();
-  renderTriggerSuggestions();
-  renderMacroList();
-  syncScriptFromVisual();
 }
 
 function addTask() {
@@ -1234,7 +1234,7 @@ function visualModelToScript(model) {
     lines.push(`macro "${scriptName(macro.name || "Macro")}" {`);
     if (macro.description) lines.push(`  description ${macro.description}`);
     lines.push(`  enabled ${macro.enabled ? "on" : "off"}`);
-    lines.push(`  trigger ${macro.triggerButtons.join(" ")}`);
+    if (macro.triggerButtons.length) lines.push(`  trigger ${macro.triggerButtons.join(" ")}`);
     lines.push("");
 
     for (const task of macro.tasks) {
@@ -1542,34 +1542,6 @@ function scriptActionValue(step) {
   return stepTargetType(step) === "mouse" ? normalizeMouseButton(stepValue(step)) : normalizeKey(stepValue(step));
 }
 
-function nextAvailableTrigger(index) {
-  const used = new Set();
-  if (state?.visualModel?.macros) {
-    for (const macro of state.visualModel.macros) {
-      for (const trigger of macro.triggerButtons || []) used.add(trigger);
-    }
-  }
-  const fallback = [
-    "BTN_SIDE",
-    "BTN_EXTRA",
-    "KEY_BACK",
-    "KEY_FORWARD",
-    "KEY_F1",
-    "KEY_F2",
-    "KEY_F3",
-    "KEY_F4",
-    "KEY_F5",
-    "KEY_F6",
-    "KEY_F7",
-    "KEY_F8",
-    "KEY_F9",
-    "KEY_F10",
-    "KEY_F11",
-    "KEY_F12",
-  ];
-  return fallback.find((trigger) => !used.has(trigger)) || `KEY_${String.fromCharCode(65 + (index % 26))}`;
-}
-
 function triggerOwners(model) {
   const owners = new Map();
   model.macros.forEach((macro, index) => {
@@ -1651,19 +1623,13 @@ editor.addEventListener("scroll", () => {
 });
 
 triggerSuggestions.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-add-trigger]");
+  const button = event.target.closest("[data-toggle-trigger]");
   if (!button) return;
-  addTrigger(button.dataset.addTrigger);
+  toggleTrigger(button.dataset.toggleTrigger);
   renderTriggerSuggestions();
 });
 triggerSuggestions.addEventListener("dragstart", handleTriggerDragStart);
 triggerSuggestions.addEventListener("dragend", handleTriggerDragEnd);
-
-triggerChips.addEventListener("click", (event) => {
-  const button = event.target.closest("[data-remove-trigger]");
-  if (!button) return;
-  removeTrigger(Number(button.dataset.removeTrigger));
-});
 
 macroList.addEventListener("click", handleMacroListClick);
 macroList.addEventListener("input", handleMacroListInput);

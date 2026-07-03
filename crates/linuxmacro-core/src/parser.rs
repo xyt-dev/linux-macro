@@ -398,7 +398,7 @@ fn parse_macro_block(
                     "{display_name}:{macro_line_number}: macro {name:?} has no tasks or holds"
                 )));
             }
-            if trigger_buttons.is_empty() {
+            if enabled && trigger_buttons.is_empty() {
                 return Err(MacroParseError::new(format!(
                     "{display_name}:{macro_line_number}: macro {name:?} has no trigger; add trigger <key>"
                 )));
@@ -505,15 +505,15 @@ fn validate_program(program: &MacroProgram, display_name: &str) -> Result<(), Ma
             )));
         }
 
+        if !macro_spec.enabled {
+            continue;
+        }
+
         if macro_spec.trigger_buttons.is_empty() {
             return Err(MacroParseError::new(format!(
                 "{display_name}: macro {:?} has no trigger",
                 macro_spec.name
             )));
-        }
-
-        if !macro_spec.enabled {
-            continue;
         }
 
         for trigger in &macro_spec.trigger_buttons {
@@ -1006,6 +1006,37 @@ macro "B" {
         .unwrap_err();
 
         assert!(error.to_string().contains("trigger \"BTN_SIDE\""));
+    }
+
+    #[test]
+    fn allows_disabled_macro_without_trigger() {
+        let program = parse_macro_str(
+            r#"
+macro "Dormant" {
+  enabled off
+  every 1s press a
+}
+"#,
+        )
+        .unwrap();
+
+        assert!(!program.macros[0].enabled);
+        assert!(program.macros[0].trigger_buttons.is_empty());
+    }
+
+    #[test]
+    fn rejects_enabled_macro_without_trigger() {
+        let error = parse_macro_str(
+            r#"
+macro "Missing trigger" {
+  enabled on
+  every 1s press a
+}
+"#,
+        )
+        .unwrap_err();
+
+        assert!(error.to_string().contains("has no trigger"));
     }
 
     #[test]

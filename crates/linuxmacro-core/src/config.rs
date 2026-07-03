@@ -14,15 +14,13 @@ backend auto
 
 macro "Left clicker" {
   description Toggle left click every 50ms with the side button.
-  enabled on
-  trigger side
+  enabled off
   every 50ms click left
 }
 
 macro "R burst" {
   description Toggle r every 100ms with the extra button.
   enabled off
-  trigger extra
   every 100ms press r
 }
 

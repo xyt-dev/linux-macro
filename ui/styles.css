@@ -635,9 +635,32 @@ input[type="checkbox"] {
   gap: 6px 12px;
   padding: 10px 12px;
   border-radius: 14px;
+  border: 1px solid color-mix(in srgb, var(--surface1) 45%, transparent);
   text-align: left;
+  color: var(--subtext);
+  background: color-mix(in srgb, var(--field-bg) 78%, transparent);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.suggestion-item:hover {
+  transform: translateY(-1px);
   color: var(--text);
-  background: var(--soft-bg);
+  border-color: color-mix(in srgb, var(--blue) 42%, var(--panel-border));
+}
+
+.suggestion-item.selected {
+  color: var(--crust);
+  border-color: color-mix(in srgb, var(--blue) 78%, var(--teal));
+  background: linear-gradient(135deg, var(--teal), var(--blue));
+  box-shadow: 0 10px 24px color-mix(in srgb, var(--blue) 22%, transparent);
+}
+
+.suggestion-item.selected:hover {
+  color: var(--crust);
 }
 
 .suggestion-item[draggable="true"] {
@@ -670,6 +693,15 @@ input[type="checkbox"] {
 .suggestion-item span,
 .suggestion-item small {
   color: var(--subtext);
+}
+
+.suggestion-item.selected span,
+.suggestion-item.selected small {
+  color: color-mix(in srgb, var(--crust) 82%, transparent);
+}
+
+.suggestion-item.selected span {
+  background: color-mix(in srgb, var(--crust) 12%, transparent);
 }
 
 .suggestion-item small {
