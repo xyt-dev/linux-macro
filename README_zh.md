@@ -86,10 +86,10 @@ OpenSSL、AppIndicator、librsvg 和基础编译工具。
 
 ```bash
 cargo install --path src-tauri --locked
-linux-macro
+linuxmacro-tauri
 ```
 
-这会把 Tauri 桌面应用安装为 `~/.cargo/bin/linux-macro`。
+这会把 Tauri 桌面应用安装为 `~/.cargo/bin/linuxmacro-tauri`。
 请确保 `~/.cargo/bin` 已加入 `PATH`。更新已有本地安装时加上 `--force`：
 
 ```bash
@@ -99,13 +99,13 @@ cargo install --path src-tauri --force
 如果从 Git 仓库安装，使用同样的 package 和 bin 名称：
 
 ```bash
-cargo install --git <repo-url> --package linuxmacro-app --bin linux-macro --locked
+cargo install --git <repo-url> --package linuxmacro-tauri --bin linuxmacro-tauri --locked
 ```
 
 ### 4. 不安装直接启动
 
 ```bash
-cargo run -p linuxmacro-app
+cargo run -p linuxmacro-tauri
 ```
 
 ### 5. 可选 CLI

@@ -98,10 +98,10 @@ From the repository root:
 
 ```bash
 cargo install --path src-tauri --locked
-linux-macro
+linuxmacro-tauri
 ```
 
-This installs the Tauri desktop app as `linux-macro` under `~/.cargo/bin`.
+This installs the Tauri desktop app as `linuxmacro-tauri` under `~/.cargo/bin`.
 Make sure `~/.cargo/bin` is in `PATH`. To update an existing local install, add
 `--force`:
 
@@ -112,13 +112,13 @@ cargo install --path src-tauri --force
 For a Git install, use the same package and binary names:
 
 ```bash
-cargo install --git <repo-url> --package linuxmacro-app --bin linux-macro --locked
+cargo install --git <repo-url> --package linuxmacro-tauri --bin linuxmacro-tauri --locked
 ```
 
 ### 4. Run without installing
 
 ```bash
-cargo run -p linuxmacro-app
+cargo run -p linuxmacro-tauri
 ```
 
 ### 5. Optional CLI

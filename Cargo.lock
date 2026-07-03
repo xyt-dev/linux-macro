@@ -1687,21 +1687,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "linuxmacro-app"
+name = "linuxmacro-core"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "serde",
+]
+
+[[package]]
+name = "linuxmacro-tauri"
 version = "0.1.0"
 dependencies = [
  "linuxmacro-core",
  "serde",
  "tauri",
  "tauri-build",
-]
-
-[[package]]
-name = "linuxmacro-core"
-version = "0.1.0"
-dependencies = [
- "libc",
- "serde",
 ]
 
 [[package]]

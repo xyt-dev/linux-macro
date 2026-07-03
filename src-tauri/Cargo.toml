@@ -1,12 +1,12 @@
 [package]
-name = "linuxmacro-app"
+name = "linuxmacro-tauri"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
 build = "build.rs"
 
 [[bin]]
-name = "linux-macro"
+name = "linuxmacro-tauri"
 path = "src/main.rs"
 
 [dependencies]
